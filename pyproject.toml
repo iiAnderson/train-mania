@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "darwin"
+version = "0.1.0"
+description = ""
+authors = ["Robbie Anderson <iiAnderson@hotmail.co.uk>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "~3.8"
+stomp-py = "^8.1.0"
+pyxb = "^1.2.6"
+xmltodict = "^0.13.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
