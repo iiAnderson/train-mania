@@ -10,6 +10,7 @@ python = "~3.8"
 stomp-py = "^8.1.0"
 pyxb = "^1.2.6"
 xmltodict = "^0.13.0"
+click = "^8.1.6"
 
 
 [build-system]
