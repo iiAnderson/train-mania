@@ -27,10 +27,12 @@ class StompClient(stomp.ConnectionListener):
         logging.info('Connecting to ' + host_and_port[0])
 
     def on_message(self, frame):
-        
+
         try:
             msg = Message.from_frame(frame)
-            self._message_service.parse(msg)    
-
+            self._message_service.parse(msg)
         except NoValidMessageTypeFound: 
             ...
+        except Exception as e: 
+            print(f"breaking exception {str(e)}")
+

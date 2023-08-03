@@ -57,6 +57,7 @@ def main(message_type: str, rid: str) -> None:
         while True:
             time.sleep(1)
     finally:
+        print("Closing connection")
         conn.disconnect()
 
 
