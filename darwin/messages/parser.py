@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 import io
-from typing import Any
+from typing import Any, Optional
 import zlib
 import xmltodict
 
@@ -41,6 +41,17 @@ class Message:
 
         except KeyError:
             raise Exception("Invalid headers")
+
+
+    def get_station(self) -> Optional[str]:
+
+        update_origin = self.body['Pport']['uR']['@updateOrigin']
+
+        stations = self.body['Pport']['uR']['TS']['ns5:Location']
+
+        return f"{update_origin}:" + ",".join([x['@tpl'] for x in stations])
+
+
         
 
 
@@ -51,4 +62,6 @@ class MessageService:
     def parse(self, message: Message) -> None: 
 
         if message.message_type == MessageType.TS:
-            print(message.body)
+            data =  message.get_station()
+            if data:
+                print(data)

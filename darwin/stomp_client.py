@@ -11,13 +11,13 @@ class StompClient(stomp.ConnectionListener):
         self._message_service = message_service
 
     def on_heartbeat(self):
-        logging.info('Received a heartbeat')
+        print('Received a heartbeat')
 
     def on_heartbeat_timeout(self):
-        logging.error('Heartbeat timeout')
+        print('Heartbeat timeout')
 
     def on_error(self, headers, message):
-        logging.error(message)
+        print(message)
 
     def on_disconnected(self):
         time.sleep(RECONNECT_DELAY_SECS)
