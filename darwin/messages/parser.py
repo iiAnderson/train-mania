@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 import io
 from typing import Any, Optional
@@ -25,6 +26,7 @@ class Message:
 
     message_type: MessageType
     body: dict
+    timestamp: datetime
 
     @classmethod
     def from_frame(cls, frame: Any) -> Message:
@@ -39,10 +41,12 @@ class Message:
 
         try:
             uR = data['Pport']['uR']
+            ts = datetime.fromisoformat(data['Pport']['@ts'])
         except:
             print(data)
+            raise
 
-        return cls(message_type=message_type, body=uR)
+        return cls(message_type=message_type, body=uR, timestamp=ts)
 
 
 @dataclass
@@ -68,6 +72,7 @@ class TSMessage:
 
     rid: str
     locations: list[TSLocation]
+    timestamp: datetime
 
     @classmethod
     def create(cls, message: Message) -> TSMessage:
@@ -80,11 +85,12 @@ class TSMessage:
         if type(locs) != list:
             locs = [locs]
 
-        return cls(rid, [TSLocation.create(loc) for loc in locs])
+        return cls(rid, [TSLocation.create(loc) for loc in locs], message.timestamp)
 
 
     def get_stations(self) -> str:
-        return f"{self.rid}: " + ",".join([str(loc) for loc in self.locations])
+        ts = self.timestamp.strftime("%H:%M:%S")
+        return f"({ts}){self.rid}: " + ",".join([str(loc) for loc in self.locations])
 
 class MessageService:
 
