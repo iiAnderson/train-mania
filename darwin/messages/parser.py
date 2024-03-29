@@ -12,7 +12,14 @@ class NoValidMessageTypeFound(Exception):
 
 class MessageType(str, Enum):
 
-    TS =  "TS"
+    TS =  "TS" # Actual and forecast information
+    SC = "SC" # Schedule updates
+    SF = "SF" # Schedule formations
+    AS = "AS" # Association updates
+    TO = "TO" # Train order
+    LO = "LO" # Loading
+    OW = "OW" # Station messages
+    NO = "NO" # Notifications
 
     @staticmethod
     def parse(type: str) -> MessageType:
@@ -22,16 +29,13 @@ class MessageType(str, Enum):
             raise NoValidMessageTypeFound(f"{type} not found")
 
 @dataclass
-class Message:
-
-    message_type: MessageType
+class RawMessage:
+    message_type: str
     body: dict
-    timestamp: datetime
 
     @classmethod
-    def from_frame(cls, frame: Any) -> Message:
-
-        message_type = MessageType.parse(frame.headers['MessageType'])
+    def parse(cls, frame: Any) -> RawMessage:
+        message_type = frame.headers['MessageType']
     
         bio = io.BytesIO()
         bio.write(str.encode('utf-16'))
@@ -39,23 +43,42 @@ class Message:
         msg = zlib.decompress(frame.body, zlib.MAX_WBITS | 32)
         data = xmltodict.parse(msg)
 
+        return cls(message_type, data) 
+
+    def __str__(self) -> str:
+        return f"[{self.message_type}] {self.body}"
+
+@dataclass
+class Message:
+
+    message_type: MessageType
+    body: dict
+    timestamp: datetime
+
+
+    @classmethod
+    def from_frame(cls, raw_message: RawMessage) -> Message:
+
+        parsed_message_type = MessageType(raw_message.message_type)
+
         try:
-            uR = data['Pport']['uR']
-            ts = datetime.fromisoformat(data['Pport']['@ts'])
+            uR = raw_message.body['Pport']['uR']
+            split_ts = raw_message.body['Pport']['@ts'].split(".")
+            ts = datetime.strptime(split_ts[0], "%Y-%m-%dT%H:%M:%S")
         except:
-            print(data)
+            print(raw_message.body)
             raise
 
-        return cls(message_type=message_type, body=uR, timestamp=ts)
+        return cls(message_type=parsed_message_type, body=uR, timestamp=ts)
 
 
 @dataclass
 class TSLocation:
 
-    tpl: str
-    wta: Optional[str] = None
-    wtd: Optional[str] = None
-    wtp: Optional[str] = None
+    tpl: str # location id
+    wta: Optional[str] = "" # arrival time
+    wtd: Optional[str] = "" # departure time
+    wtp: Optional[str] = "" # passing time
 
     @classmethod
     def create(cls, data: dict):
@@ -63,14 +86,13 @@ class TSLocation:
         return cls(tpl=data['@tpl'], wtp=data.get('@wtp'), wta=data.get("@wta"), wtd=data.get('@wtd'))
 
     def __str__(self):
-        date = self.wta if self.wta else self.wtp
-        return f"{self.tpl}({date})"
+        return f"{self.tpl},{self.wta},{self.wtp},{self.wtd}"
 
 
 @dataclass
 class TSMessage:
 
-    rid: str
+    rid: str # rail id
     locations: list[TSLocation]
     timestamp: datetime
 
@@ -87,10 +109,9 @@ class TSMessage:
 
         return cls(rid, [TSLocation.create(loc) for loc in locs], message.timestamp)
 
-
     def get_stations(self) -> str:
         ts = self.timestamp.strftime("%H:%M:%S")
-        return f"({ts}){self.rid}: " + ",".join([str(loc) for loc in self.locations])
+        return f"{ts},{self.rid}," + ",".join([str(loc) for loc in self.locations])
 
 class MessageService:
 
@@ -103,3 +124,7 @@ class MessageService:
 
             if data:
                 print(data)
+        
+        if message.message_type == MessageType.SC:
+            print("Schedule message")
+            print(message.body)
