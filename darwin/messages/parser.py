@@ -7,7 +7,12 @@ from typing import Any, Optional
 import zlib
 import xmltodict
 
+from messages.ts import TSLocation, StoppingTSLocation
+
 class NoValidMessageTypeFound(Exception):
+    ...
+
+class NotLocationTSMessage(Exception):
     ...
 
 class MessageType(str, Enum):
@@ -57,7 +62,7 @@ class Message:
 
 
     @classmethod
-    def from_frame(cls, raw_message: RawMessage) -> Message:
+    def from_message(cls, raw_message: RawMessage) -> Message:
 
         parsed_message_type = MessageType(raw_message.message_type)
 
@@ -73,58 +78,68 @@ class Message:
 
 
 @dataclass
-class TSLocation:
-
-    tpl: str # location id
-    wta: Optional[str] = "" # arrival time
-    wtd: Optional[str] = "" # departure time
-    wtp: Optional[str] = "" # passing time
-
-    @classmethod
-    def create(cls, data: dict):
-
-        return cls(tpl=data['@tpl'], wtp=data.get('@wtp'), wta=data.get("@wta"), wtd=data.get('@wtd'))
-
-    def __str__(self):
-        return f"{self.tpl},{self.wta},{self.wtp},{self.wtd}"
-
-
-@dataclass
-class TSMessage:
+class TSLocationMessage:
 
     rid: str # rail id
     locations: list[TSLocation]
     timestamp: datetime
 
     @classmethod
-    def create(cls, message: Message) -> TSMessage:
+    def create(cls, message: Message) -> TSLocationMessage:
 
         ts = message.body['TS']
 
         rid = ts['@rid']
-        locs = ts['ns5:Location']
+        locs = ts.get('ns5:Location')
+
+        if not locs:
+            raise NotLocationTSMessage(f"Not TS Location message")
 
         if type(locs) != list:
             locs = [locs]
 
-        return cls(rid, [TSLocation.create(loc) for loc in locs], message.timestamp)
+        parsed_locs = []
+        for loc in locs:
+            try:
+                parsed_locs.append(StoppingTSLocation.create(loc))
+            except KeyError as e:
+                ...
+
+        return cls(rid, parsed_locs, message.timestamp)
 
     def get_stations(self) -> str:
         ts = self.timestamp.strftime("%H:%M:%S")
         return f"{ts},{self.rid}," + ",".join([str(loc) for loc in self.locations])
 
+    def filter_for(self, tiploc: str) -> bool:
+        for location in self.locations:
+            if location.tpl == tiploc:
+                return True
+
+        return False
+
 class MessageService:
 
 
+    def __init__(self, message_filter: Optional[MessageType] = None) -> None:
+
+        self._message_filter = message_filter
+
     def parse(self, message: Message) -> None: 
 
-        if message.message_type == MessageType.TS:
-            ts_msg = TSMessage.create(message)
-            data = ts_msg.get_stations()
+        if self._message_filter and self._message_filter != message.message_type:
+            return
 
-            if data:
-                print(data)
+        if message.message_type == MessageType.TS:
+            ts_msg = TSLocationMessage.create(message)
+            
+            if ts_msg.filter_for("PADTON"):
+
+                print("----")
+                print(ts_msg.rid)
+                for location in ts_msg.locations:
+                    print(location)
         
-        if message.message_type == MessageType.SC:
+        elif message.message_type == MessageType.SC:
             print("Schedule message")
             print(message.body)

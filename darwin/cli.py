@@ -2,6 +2,7 @@ import os
 import socket
 import time
 import click
+from messages.parser import MessageType
 import stomp
 
 from messages.parser import MessageService
@@ -36,7 +37,7 @@ def main(message_type: str, rid: str) -> None:
                           auto_decode=False,
                           heartbeats=(HEARTBEAT_INTERVAL_MS, HEARTBEAT_INTERVAL_MS))
 
-    msg_service = MessageService()
+    msg_service = MessageService(message_filter=MessageType.TS)
 
     conn.set_listener('', StompClient(msg_service))
 

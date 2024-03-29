@@ -1,7 +1,8 @@
+import traceback
 import stomp
 import time
 import logging
-from messages.parser import Message, RawMessage, NoValidMessageTypeFound, MessageService
+from messages.parser import Message, RawMessage, NoValidMessageTypeFound, NotLocationTSMessage, MessageService
 
 RECONNECT_DELAY_SECS = 15
 
@@ -36,10 +37,13 @@ class StompClient(stomp.ConnectionListener):
             return
         
         try:
-            msg = Message.from_frame(raw_message)
+            msg = Message.from_message(raw_message)
             self._message_service.parse(msg)
         except NoValidMessageTypeFound: 
             ...
+        except NotLocationTSMessage:
+            ...
         except Exception as e: 
-            print(f"breaking exception {str(e)}")
+            print(raw_message.body)
+            print(traceback.format_exc())
 
