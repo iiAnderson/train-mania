@@ -1,24 +1,19 @@
 from __future__ import annotations
+from abc import ABC
 from dataclasses import dataclass
+import traceback
 from typing import Optional
 
 
-@dataclass
-class TSLocation:
-
-    tpl: str # location id
-    wta: Optional[str] = "" # arrival time
-    wtd: Optional[str] = "" # departure time
-    wtp: Optional[str] = "" # passing time
+class TSLocation(ABC):
 
     @classmethod
-    def create(cls, data: dict):
+    def create(cls, body: dict) -> TSLocation:
 
-        return cls(tpl=data['@tpl'], wtp=data.get('@wtp'), wta=data.get("@wta"), wtd=data.get('@wtd'))
+        if 'ns5:pass' in body:
+            return PassingTSLocation.create(body)
 
-    def __str__(self):
-        return f"{self.tpl},{self.wta},{self.wtp},{self.wtd}"
-
+        return StoppingTSLocation.create(body)
 
 @dataclass
 class EstimatedPlatform:
@@ -31,30 +26,31 @@ class EstimatedPlatform:
 @dataclass
 class WorkingTime:
 
-    arrrival: str = ""
-    departure: str = ""
-    passing: str = ""
+    arrrival: Optional[str] = None
+    departure: Optional[str] = None
+    passing: Optional[str] = None
 
 
 @dataclass
-class EstimatedTime:
+class Timestamp:
 
     time: str
     status: str
     src: str
+    delayed: bool = False
 
 
 @dataclass
-class StoppingTSLocation:
+class StoppingTSLocation(TSLocation):
 
     tpl: str
     working_time: WorkingTime
-    estimated_arr: Optional[EstimatedTime]
-    estimated_dep: Optional[EstimatedTime]
+    estimated_arr: Optional[Timestamp]
+    estimated_dep: Optional[Timestamp]
     estimated_platform: Optional[EstimatedPlatform]
 
     @classmethod
-    def parse_est_arr(cls, body: dict) -> Optional[EstimatedTime]:
+    def parse_est_arr(cls, body: dict) -> Optional[Timestamp]:
 
         if 'ns5:arr' not in body:
             return None
@@ -64,16 +60,18 @@ class StoppingTSLocation:
         at = est_arr.get('@at')
         et = est_arr.get('@et')
 
-        src = est_arr['@src']
+        src = est_arr.get('@src')
+        delayed = bool(est_arr.get("@delayed", False))
 
-        return EstimatedTime(
+        return Timestamp(
             at if at else et,
             "actual" if at else "estimated",
-            src
+            src,
+            delayed
         )
 
     @classmethod
-    def parse_est_dep(cls, body: dict) -> Optional[EstimatedTime]:
+    def parse_est_dep(cls, body: dict) -> Optional[Timestamp]:
 
         if 'ns5:dep' not in body:
             return None
@@ -83,12 +81,14 @@ class StoppingTSLocation:
         at = est_dep.get('@at')
         et = est_dep.get('@et')
 
-        src = est_dep['@src']
+        src = est_dep.get('@src')
+        delayed = bool(est_dep.get("@delayed", False))
 
-        return EstimatedTime(
+        return Timestamp(
             at if at else et,
             "actual" if at else "estimated",
-            src
+            src,
+            delayed
         )
 
     @classmethod
@@ -99,10 +99,12 @@ class StoppingTSLocation:
 
         est_plat = body['ns5:plat']
 
-        print(body)
-        src = est_plat['@platsrc']
+        if type(est_plat) == str:
+            return EstimatedPlatform("unknown", False, est_plat)
+
+        src = est_plat.get('@platsrc')
         confirmed = bool(est_plat.get('@conf', False))
-        text = est_plat['#text']
+        text = est_plat.get('#text')
 
         return EstimatedPlatform(src, confirmed, text)
 
@@ -110,26 +112,61 @@ class StoppingTSLocation:
     def create(cls, body: dict) -> StoppingTSLocation:
         
         tpl = body['@tpl']
-        wta = body['@wta']
-        wtd = body.get('@wtd', "")
+        wta = body.get('@wta')
+        wtd = body.get('@wtd')
 
         est_arr = cls.parse_est_arr(body)
         est_dep = cls.parse_est_dep(body)
-        # est_plat = cls.parse_est_plat(body) can be an int, needs work
+        est_plat = cls.parse_est_plat(body)
 
         return StoppingTSLocation(
             tpl=tpl, 
             working_time=WorkingTime(wta, wtd), 
             estimated_arr=est_arr, 
             estimated_dep=est_dep, 
-            estimated_platform=None
+            estimated_platform=est_plat
         )
 
 
 @dataclass
-class PassingTSLocation:
+class PassingTSLocation(TSLocation):
 
     tpl: str
-    working_time: WorkingTime
-    estimated_pass: EstimatedTime 
+    working_passing: Optional[str]
+    estimated_pass: Optional[Timestamp] 
+
+    @classmethod
+    def parse_est_pass(cls, body: dict) -> Optional[Timestamp]:
+
+        if 'ns5:pass' not in body:
+            return None
+
+        est_dep = body['ns5:pass']
+
+        at = est_dep.get('@at')
+        et = est_dep.get('@et')
+
+        src = est_dep.get('@src')
+        delayed = bool(est_dep.get("@delayed", False))
+
+        return Timestamp(
+            at if at else et,
+            "actual" if at else "estimated",
+            src,
+            delayed
+        )
+
+    @classmethod
+    def create(cls, body: dict) -> PassingTSLocation:
+        
+        tpl = body['@tpl']
+        wtp = body.get('@wtp')
+
+        estimated_pass = cls.parse_est_pass(body)
+
+        return PassingTSLocation(
+            tpl=tpl, 
+            working_passing=wtp,
+            estimated_pass=estimated_pass
+        )
 

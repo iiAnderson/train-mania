@@ -1,13 +1,16 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 import io
+import json
+import os
 from typing import Any, Optional
 import zlib
 import xmltodict
+from os.path import isfile, join
 
-from messages.ts import TSLocation, StoppingTSLocation
+from messages.ts import TSLocation, StoppingTSLocation, PassingTSLocation
 
 class NoValidMessageTypeFound(Exception):
     ...
@@ -100,10 +103,7 @@ class TSLocationMessage:
 
         parsed_locs = []
         for loc in locs:
-            try:
-                parsed_locs.append(StoppingTSLocation.create(loc))
-            except KeyError as e:
-                ...
+            parsed_locs.append(TSLocation.create(loc))
 
         return cls(rid, parsed_locs, message.timestamp)
 
@@ -124,6 +124,24 @@ class MessageService:
     def __init__(self, message_filter: Optional[MessageType] = None) -> None:
 
         self._message_filter = message_filter
+        self._save_directory = "saved"
+
+    def _save(self, message: TSLocationMessage) -> None:
+
+        if not os.path.exists(self._save_directory):
+            os.makedirs(self._save_directory)
+
+        try:
+            with open(f"{self._save_directory}/{message.rid}.json", "r") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            data = {}
+
+        data[message.timestamp.isoformat()] = [asdict(loc) for loc in message.locations]
+
+        with open(f"{self._save_directory}/{message.rid}.json", "w") as f:
+            json.dump(data, f)
+
 
     def parse(self, message: Message) -> None: 
 
@@ -135,8 +153,10 @@ class MessageService:
             
             if ts_msg.filter_for("PADTON"):
 
+                self._save(ts_msg)
+
                 print("----")
-                print(ts_msg.rid)
+                print(f"{ts_msg.rid} {ts_msg.timestamp}")
                 for location in ts_msg.locations:
                     print(location)
         
