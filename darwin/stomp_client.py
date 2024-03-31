@@ -2,7 +2,9 @@ import traceback
 import stomp
 import time
 import logging
-from messages.parser import Message, RawMessage, NoValidMessageTypeFound, NotLocationTSMessage, MessageService
+from messages.common import Message, RawMessage, NoValidMessageTypeFound
+from messages.service import MessageService
+from messages.ts import NotLocationTSMessage
 
 RECONNECT_DELAY_SECS = 15
 

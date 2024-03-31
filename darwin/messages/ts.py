@@ -1,11 +1,17 @@
 from __future__ import annotations
-from abc import ABC
 from dataclasses import dataclass
-import traceback
+from datetime import datetime
 from typing import Optional
 
+from messages.common import Message
 
-class TSLocation(ABC):
+
+class NotLocationTSMessage(Exception):
+    ...
+
+class TSLocation():
+
+    tpl: str
 
     @classmethod
     def create(cls, body: dict) -> TSLocation:
@@ -170,3 +176,40 @@ class PassingTSLocation(TSLocation):
             estimated_pass=estimated_pass
         )
 
+@dataclass
+class TSLocationMessage:
+
+    rid: str # rail id
+    locations: list[TSLocation]
+    timestamp: datetime
+
+    @classmethod
+    def create(cls, message: Message) -> TSLocationMessage:
+
+        ts = message.body['TS']
+
+        rid = ts['@rid']
+        locs = ts.get('ns5:Location')
+
+        if not locs:
+            raise NotLocationTSMessage(f"Not TS Location message")
+
+        if type(locs) != list:
+            locs = [locs]
+
+        parsed_locs = []
+        for loc in locs:
+            parsed_locs.append(TSLocation.create(loc))
+
+        return cls(rid, parsed_locs, message.timestamp)
+
+    def get_stations(self) -> str:
+        ts = self.timestamp.strftime("%H:%M:%S")
+        return f"{ts},{self.rid}," + ",".join([str(loc) for loc in self.locations])
+
+    def filter_for(self, tiploc: str) -> bool:
+        for location in self.locations:
+            if location.tpl == tiploc:
+                return True
+
+        return False
