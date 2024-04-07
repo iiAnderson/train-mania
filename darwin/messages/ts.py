@@ -9,7 +9,7 @@ from messages.common import Message
 class NotLocationTSMessage(Exception):
     ...
 
-class TSLocation():
+class TSLocation:
 
     tpl: str
 
@@ -22,7 +22,7 @@ class TSLocation():
         return StoppingTSLocation.create(body)
 
 @dataclass
-class EstimatedPlatform:
+class Platform:
 
     src: str
     confirmed: bool
@@ -30,7 +30,7 @@ class EstimatedPlatform:
 
 
 @dataclass
-class WorkingTime:
+class Schedule:
 
     arrrival: Optional[str] = None
     departure: Optional[str] = None
@@ -50,10 +50,10 @@ class Timestamp:
 class StoppingTSLocation(TSLocation):
 
     tpl: str
-    working_time: WorkingTime
-    estimated_arr: Optional[Timestamp]
-    estimated_dep: Optional[Timestamp]
-    estimated_platform: Optional[EstimatedPlatform]
+    schedule: Schedule
+    arrival: Optional[Timestamp]
+    departure: Optional[Timestamp]
+    platform: Optional[Platform]
 
     @classmethod
     def parse_est_arr(cls, body: dict) -> Optional[Timestamp]:
@@ -98,7 +98,7 @@ class StoppingTSLocation(TSLocation):
         )
 
     @classmethod
-    def parse_est_plat(cls, body: dict) -> Optional[EstimatedPlatform]:
+    def parse_est_plat(cls, body: dict) -> Optional[Platform]:
 
         if 'ns5:plat' not in body:
             return None
@@ -106,13 +106,13 @@ class StoppingTSLocation(TSLocation):
         est_plat = body['ns5:plat']
 
         if type(est_plat) == str:
-            return EstimatedPlatform("unknown", False, est_plat)
+            return Platform("unknown", False, est_plat)
 
         src = est_plat.get('@platsrc')
         confirmed = bool(est_plat.get('@conf', False))
         text = est_plat.get('#text')
 
-        return EstimatedPlatform(src, confirmed, text)
+        return Platform(src, confirmed, text)
 
     @classmethod
     def create(cls, body: dict) -> StoppingTSLocation:
@@ -127,10 +127,10 @@ class StoppingTSLocation(TSLocation):
 
         return StoppingTSLocation(
             tpl=tpl, 
-            working_time=WorkingTime(wta, wtd), 
-            estimated_arr=est_arr, 
-            estimated_dep=est_dep, 
-            estimated_platform=est_plat
+            schedule=Schedule(wta, wtd), 
+            arrival=est_arr, 
+            departure=est_dep, 
+            platform=est_plat
         )
 
 
@@ -213,3 +213,15 @@ class TSLocationMessage:
                 return True
 
         return False
+
+    @property
+    def destination(self) -> str:
+        dest = self.locations[-1]
+
+        return dest.tpl
+        
+    @property
+    def current(self) -> str:
+        loc = self.locations[0]
+
+        return loc.tpl

@@ -28,7 +28,7 @@ class MessageService:
         data[message.timestamp.isoformat()] = [asdict(loc) for loc in message.locations]
 
         with open(f"{self._save_directory}/{message.rid}.json", "w") as f:
-            json.dump(data, f)
+            json.dump(data, f, indent=4)
 
 
     def parse(self, message: Message) -> None: 
@@ -39,9 +39,10 @@ class MessageService:
         if message.message_type == MessageType.TS:
             ts_msg = TSLocationMessage.create(message)
             
-            if ts_msg.filter_for("PADTON"):
+            if ts_msg.filter_for("SLSBRY"):
 
                 self._save(ts_msg)
+                print(f"{ts_msg.rid}: {ts_msg.current} -> {ts_msg.destination}")
         
         elif message.message_type == MessageType.SC:
             print("Schedule message")
