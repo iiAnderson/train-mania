@@ -21,15 +21,28 @@ class MessageService:
 
         try:
             with open(f"{self._save_directory}/{message.rid}.json", "r") as f:
-                data = json.load(f)
+                data = [json.loads(line) for line in f]
+                print(f"Updating file wth lines {len(data)}")
         except FileNotFoundError:
-            data = {}
+            data = []
+            print(f"Starting new file {len(data)}")
 
-        data[message.timestamp.isoformat()] = [asdict(loc) for loc in message.locations]
+
+        data.extend(
+            [
+                {
+                    **asdict(loc), 
+                    **{
+                        "rid": message.rid,
+                        "ts": message.timestamp.isoformat()
+                    }
+                } for loc in message.locations
+            ]
+        )
 
         with open(f"{self._save_directory}/{message.rid}.json", "w") as f:
-            json.dump(data, f, indent=4)
-
+            f.write("\n".join([json.dumps(x) for x in data]))
+        
 
     def parse(self, message: Message) -> None: 
 
@@ -39,7 +52,7 @@ class MessageService:
         if message.message_type == MessageType.TS:
             ts_msg = TSLocationMessage.create(message)
             
-            if ts_msg.filter_for("SLSBRY"):
+            if ts_msg.filter_for("PADTON"):
 
                 self._save(ts_msg)
                 print(f"{ts_msg.rid}: {ts_msg.current} -> {ts_msg.destination}")
