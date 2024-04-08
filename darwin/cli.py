@@ -42,6 +42,7 @@ def main(message_type: str, rid: str) -> None:
     conn.set_listener('', StompClient(msg_service))
 
     connect_header = {'client-id': USERNAME + '-' + CLIENT_ID}
+    print(connect_header)
     subscribe_header = {'activemq.subscriptionName': CLIENT_ID}
 
     conn.connect(username=USERNAME,
