@@ -33,16 +33,22 @@ HEARTBEAT_INTERVAL_MS = 15000
     required=False
 )
 def main(message_type: str, rid: str) -> None:
-    conn = stomp.Connection12([(HOSTNAME, HOSTPORT)],
-                          auto_decode=False,
-                          heartbeats=(HEARTBEAT_INTERVAL_MS, HEARTBEAT_INTERVAL_MS))
+    conn = stomp.Connection12(
+        [(HOSTNAME, HOSTPORT)],
+        auto_decode=False,
+        heartbeats=(HEARTBEAT_INTERVAL_MS, HEARTBEAT_INTERVAL_MS),
+        reconnect_sleep_initial=1, 
+        reconnect_sleep_increase=2, 
+        reconnect_sleep_jitter=0.6, 
+        reconnect_sleep_max=60.0, 
+        reconnect_attempts_max=60
+    )
 
     msg_service = MessageService(message_filter=MessageType.TS)
 
     conn.set_listener('', StompClient(msg_service))
 
     connect_header = {'client-id': USERNAME + '-' + CLIENT_ID}
-    print(connect_header)
     subscribe_header = {'activemq.subscriptionName': CLIENT_ID}
 
     conn.connect(username=USERNAME,

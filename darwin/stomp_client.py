@@ -25,7 +25,7 @@ class StompClient(stomp.ConnectionListener):
 
     def on_disconnected(self):
         time.sleep(RECONNECT_DELAY_SECS)
-        exit(-1)
+        print("Disconnected")
 
     def on_connecting(self, host_and_port):
         logging.info('Connecting to ' + host_and_port[0])
