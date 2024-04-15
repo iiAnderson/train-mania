@@ -17,7 +17,7 @@ HOSTPORT = 61613
 TOPIC = '/topic/darwin.pushport-v16'
 
 CLIENT_ID = socket.getfqdn()
-HEARTBEAT_INTERVAL_MS = 15000
+HEARTBEAT_INTERVAL_MS = 25000
 
 @click.command()
 @click.option(
@@ -41,7 +41,8 @@ def main(message_type: str, rid: str) -> None:
         reconnect_sleep_increase=2, 
         reconnect_sleep_jitter=0.6, 
         reconnect_sleep_max=60.0, 
-        reconnect_attempts_max=60
+        reconnect_attempts_max=60,
+        heart_beat_receive_scale=2.5
     )
 
     msg_service = MessageService(message_filter=MessageType.TS)
