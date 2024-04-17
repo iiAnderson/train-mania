@@ -3,6 +3,8 @@ from dataclasses import asdict
 import json
 import os
 from typing import Optional
+
+from darwin.messages.schedule import Schedule
 from messages.ts import TSLocationMessage
 from messages.common import MessageType, Message
 
@@ -58,5 +60,7 @@ class MessageService:
                 print(f"{ts_msg.rid}: {ts_msg.current} -> {ts_msg.destination}")
         
         elif message.message_type == MessageType.SC:
-            print("Schedule message")
-            print(message.body)
+            # print("Schedule message")
+            # print(message.body)
+
+            print(Schedule.create(message.body))

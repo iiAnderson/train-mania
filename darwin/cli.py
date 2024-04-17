@@ -45,7 +45,7 @@ def main(message_type: str, rid: str) -> None:
         heart_beat_receive_scale=2.5
     )
 
-    msg_service = MessageService(message_filter=MessageType.TS)
+    msg_service = MessageService(message_filter=MessageType.SC)
 
     conn.set_listener('', StompClient(msg_service))
 
