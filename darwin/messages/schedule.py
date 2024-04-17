@@ -10,6 +10,7 @@ class InvalidCISScheduleException(Exception): ...
 
 class InvalidScheduleException(Exception): ...
 
+class NonPassengerService(Exception): ...
 
 @dataclass
 class Schedule:
@@ -24,10 +25,10 @@ class Schedule:
 
         if origin == "CIS":
             return CISSchedule.create(data)
-        elif origin == "Trust":
-            return TrustSchedule.create(data)
-        elif origin == "Darwin":
-            return DarwinSchedule.create(data)
+        # elif origin == "Trust":
+        #     return TrustSchedule.create(data)
+        # elif origin == "Darwin":
+        #     return DarwinSchedule.create(data)
 
 
 @dataclass
@@ -39,11 +40,24 @@ class CISSchedule(Schedule):
     def create(cls, data: dict) -> CISSchedule:
 
         try:
-            return CISSchedule(
-                schedules = [TrainSchedule.create(loc) for loc in data['schedule']]
-            )
+            schedule = data['schedule']
+
         except KeyError as e:
             raise InvalidCISScheduleException(f"Error when extracting data: {data}") from e
+
+        locations = []
+
+        for loc in schedule:
+            try:
+                locations.append(TrainSchedule.create(loc))
+            except NonPassengerService as e:
+                print(e)
+                pass
+
+        return CISSchedule(
+            schedules = locations
+        )
+
 
 
 @dataclass
@@ -121,7 +135,6 @@ class Location:
     def create(cls, data: dict) -> Location:
 
         try:
-            print(data)
             return Location(
                 wta=data.get("@wta"),
                 wtd=data.get("@wtp"),
@@ -131,7 +144,7 @@ class Location:
                 act=data["@act"],
                 avg_loading=data.get('@avg_loading')
             )
-        except KeyError as e:
+        except (KeyError, AttributeError) as e:
             raise InvalidCISScheduleException(f"Error when extracting data: {data}") from e
 
 
@@ -145,16 +158,28 @@ class TrainSchedule:
     intermediate: list[Location]
 
     @classmethod
-    def create(cls, data: dict) -> TrainSchedule:
+    def parse_is_passenger_service(cls, data: dict) -> bool:
+       
+        is_pass =  data.get("@isPassengerSvc", "true")
+
+        return True if is_pass == "true" else False
+
+    @classmethod
+    def create(cls, data: dict) -> Optional[TrainSchedule]:
 
         try:
             intermediate_points = data.get("ns2:IP", [])
+            is_passenger_service = cls.parse_is_passenger_service(data)
+            rid = data["@rid"]
+            
+            if not is_passenger_service:
+                raise NonPassengerService(f"rid: {rid} is a freight service")
 
             if type(intermediate_points) == dict:
                 intermediate_points = [intermediate_points]
 
             return TrainSchedule(
-                rid=data["@rid"],
+                rid=rid,
                 origin=Location.create(data['ns2:OR']),
                 destination=Location.create(data['ns2:DT']), 
                 intermediate=[Location.create(loc) for loc in data['ns2:IP']]
