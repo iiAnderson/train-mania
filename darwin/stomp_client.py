@@ -1,3 +1,4 @@
+import sys
 import traceback
 import stomp
 import time
@@ -21,6 +22,7 @@ class StompClient(stomp.ConnectionListener):
         print('Heartbeat timeout')
 
     def on_error(self, headers, message):
+        print("Error message")
         print(message)
 
     def on_disconnected(self):
@@ -48,4 +50,5 @@ class StompClient(stomp.ConnectionListener):
         except Exception as e: 
             print(raw_message.body)
             print(traceback.format_exc())
+            raise
 

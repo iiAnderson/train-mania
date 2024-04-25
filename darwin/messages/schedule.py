@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
 
 class InvalidTrustScheduleException(Exception): ...
@@ -22,7 +23,7 @@ class Schedule:
             origin = data['@updateOrigin']
         except KeyError as e:
             raise InvalidScheduleException(f"Error when extracting data: {data}") from e   
-
+        
         if origin == "CIS":
             return CISSchedule.create(data)
         # elif origin == "Trust":
@@ -41,6 +42,9 @@ class CISSchedule(Schedule):
 
         try:
             schedule = data['schedule']
+
+            if type(schedule) == dict:
+                schedule = [schedule]
 
         except KeyError as e:
             raise InvalidCISScheduleException(f"Error when extracting data: {data}") from e
@@ -152,6 +156,7 @@ class Location:
 class TrainSchedule:
 
     rid: str
+    ts: datetime
 
     origin: Location
     destination: Location
@@ -179,10 +184,11 @@ class TrainSchedule:
                 intermediate_points = [intermediate_points]
 
             return TrainSchedule(
+                ts=datetime.now(),
                 rid=rid,
                 origin=Location.create(data['ns2:OR']),
                 destination=Location.create(data['ns2:DT']), 
-                intermediate=[Location.create(loc) for loc in data['ns2:IP']]
+                intermediate=[Location.create(loc) for loc in intermediate_points]
             )
         except (KeyError, TypeError, AttributeError) as e:
             raise InvalidCISScheduleException(f"Error when extracting data: {data}") from e
