@@ -134,6 +134,7 @@ class Location:
     tpl: str
     act: str
     avg_loading: Optional[str]
+    cancelled: Optional[bool]
 
     @classmethod
     def create(cls, data: dict) -> Location:
@@ -146,7 +147,8 @@ class Location:
                 ptd=data.get("@ptd"),
                 tpl=data["@tpl"],
                 act=data["@act"],
-                avg_loading=data.get('@avg_loading')
+                avg_loading=data.get('@avg_loading'),
+                cancelled=data.get("@can", False)
             )
         except (KeyError, AttributeError) as e:
             raise InvalidCISScheduleException(f"Error when extracting data: {data}") from e
@@ -158,8 +160,8 @@ class TrainSchedule:
     rid: str
     ts: datetime
 
-    origin: Location
-    destination: Location
+    origin: list[Location]
+    destination: list[Location]
     intermediate: list[Location]
 
     @classmethod
@@ -170,25 +172,29 @@ class TrainSchedule:
         return True if is_pass == "true" else False
 
     @classmethod
+    def _parse_locations(cls, locs: dict | list) -> list[Location]:
+
+        if type(locs) == dict:
+            locs = [locs]
+
+        return [Location.create(loc) for loc in locs]
+
+    @classmethod
     def create(cls, data: dict) -> Optional[TrainSchedule]:
 
         try:
-            intermediate_points = data.get("ns2:IP", [])
             is_passenger_service = cls.parse_is_passenger_service(data)
             rid = data["@rid"]
             
             if not is_passenger_service:
                 raise NonPassengerService(f"rid: {rid} is a freight service")
 
-            if type(intermediate_points) == dict:
-                intermediate_points = [intermediate_points]
-
             return TrainSchedule(
                 ts=datetime.now(),
                 rid=rid,
-                origin=Location.create(data['ns2:OR']),
-                destination=Location.create(data['ns2:DT']), 
-                intermediate=[Location.create(loc) for loc in intermediate_points]
+                origin=cls._parse_locations(data['ns2:OR']),
+                destination=cls._parse_locations(data['ns2:DT']), 
+                intermediate=cls._parse_locations(data.get("ns2:IP", []))
             )
         except (KeyError, TypeError, AttributeError) as e:
             raise InvalidCISScheduleException(f"Error when extracting data: {data}") from e

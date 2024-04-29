@@ -62,15 +62,17 @@ class MessageService:
                 print(f"Starting new file {len(data)}")
 
 
-            data.append(
-                {
-                    **asdict(schedule.origin),
-                    **{
-                        "rid": schedule.rid,
-                        "type": "O",
-                        "ts": schedule.ts.isoformat()
-                    }
-                }
+            data.extend(
+                [
+                    {
+                        **asdict(origin),
+                        **{
+                            "rid": schedule.rid,
+                            "type": "I",
+                            "ts": schedule.ts.isoformat()
+                        } 
+                    } for origin in schedule.origin
+                ]
             )
 
             data.extend(
@@ -87,15 +89,17 @@ class MessageService:
             )
 
 
-            data.append(
-                {
-                    **asdict(schedule.destination),
-                    **{
-                        "rid": schedule.rid,
-                        "type": "D",
-                        "ts": schedule.ts.isoformat()
-                    }
-                }
+            data.extend(
+                [
+                    {
+                        **asdict(dest),
+                        **{
+                            "rid": schedule.rid,
+                            "type": "I",
+                            "ts": schedule.ts.isoformat()
+                        } 
+                    } for dest in schedule.destination
+                ]
             )
 
             with open(f"{self._save_directory}/{schedule.rid}.json", "w") as f:
