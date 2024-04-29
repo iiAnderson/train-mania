@@ -4,7 +4,7 @@ import json
 import os
 from typing import Optional
 
-from darwin.messages.schedule import CISSchedule, Schedule
+from darwin.messages.schedule import CISParser, InvalidDarwinScheduleException, ScheduleService, ScheduleTypeNotSupported, Train
 from messages.ts import TSLocationMessage
 from messages.common import MessageType, Message
 
@@ -14,7 +14,7 @@ class MessageService:
     def __init__(self, message_filter: Optional[MessageType] = None) -> None:
 
         self._message_filter = message_filter
-        self._save_directory = "schedule"
+        self._save_directory = "train_info"
 
     def _save(self, message: TSLocationMessage) -> None:
 
@@ -46,64 +46,23 @@ class MessageService:
             f.write("\n".join([json.dumps(x) for x in data]))
         
 
-    def _save_schedule(self, message: CISSchedule) -> None:
+    def _save_schedule(self, message: list[Train]) -> None:
 
         if not os.path.exists(self._save_directory):
             os.makedirs(self._save_directory)
 
-        for schedule in message.schedules:
+        for msg in message:
 
             try:
-                with open(f"{self._save_directory}/{schedule.rid}.json", "r") as f:
+                with open(f"{self._save_directory}/{msg.rid}.json", "r") as f:
                     data = [json.loads(line) for line in f]
                     print(f"Updating file wth lines {len(data)}")
             except FileNotFoundError:
                 data = []
                 print(f"Starting new file {len(data)}")
 
-
-            data.extend(
-                [
-                    {
-                        **asdict(origin),
-                        **{
-                            "rid": schedule.rid,
-                            "type": "I",
-                            "ts": schedule.ts.isoformat()
-                        } 
-                    } for origin in schedule.origin
-                ]
-            )
-
-            data.extend(
-                [
-                    {
-                        **asdict(interm),
-                        **{
-                            "rid": schedule.rid,
-                            "type": "I",
-                            "ts": schedule.ts.isoformat()
-                        } 
-                    } for interm in schedule.intermediate
-                ]
-            )
-
-
-            data.extend(
-                [
-                    {
-                        **asdict(dest),
-                        **{
-                            "rid": schedule.rid,
-                            "type": "I",
-                            "ts": schedule.ts.isoformat()
-                        } 
-                    } for dest in schedule.destination
-                ]
-            )
-
-            with open(f"{self._save_directory}/{schedule.rid}.json", "w") as f:
-                f.write("\n".join([json.dumps(x) for x in data]))
+            with open(f"{self._save_directory}/{msg.rid}.json", "w") as f:
+                f.write("\n".join([json.dumps(x) for x in msg.as_dict()]))
 
     def parse(self, message: Message) -> None: 
 
@@ -119,8 +78,15 @@ class MessageService:
                 print(f"{ts_msg.rid}: {ts_msg.current} -> {ts_msg.destination}")
         
         elif message.message_type == MessageType.SC:
-            msg = Schedule.create(message.body)
+            
+            try:
+                msg = ScheduleService.create(message.body, message.timestamp)
 
-            if msg:
-                self._save_schedule(msg)
-                print(asdict(msg))
+                if msg:
+                    print(f"{message.timestamp}: {msg}")
+                    self._save_schedule(msg)
+            except ScheduleTypeNotSupported as e:
+                print(e)
+            except InvalidDarwinScheduleException as e:
+                pass
+

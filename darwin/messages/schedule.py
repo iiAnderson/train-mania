@@ -1,5 +1,6 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from abc import ABC, abstractclassmethod, abstractmethod
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Optional
 
@@ -13,11 +14,12 @@ class InvalidScheduleException(Exception): ...
 
 class NonPassengerService(Exception): ...
 
-@dataclass
-class Schedule:
+class ScheduleTypeNotSupported(Exception): ...
+
+class ScheduleService:
     
     @classmethod
-    def create(cls, data: dict) -> Schedule:
+    def create(cls, data: dict, ts: datetime) -> list[Train]:
 
         try:
             origin = data['@updateOrigin']
@@ -25,20 +27,17 @@ class Schedule:
             raise InvalidScheduleException(f"Error when extracting data: {data}") from e   
         
         if origin == "CIS":
-            return CISSchedule.create(data)
-        # elif origin == "Trust":
-        #     return TrustSchedule.create(data)
-        # elif origin == "Darwin":
-        #     return DarwinSchedule.create(data)
-
+            return CISParser.create(data, ts)
+        elif origin == "Darwin":
+            return DarwinParser.create(data, ts)
+        else:
+            raise ScheduleTypeNotSupported(f"Schedule type not supported {origin}")
 
 @dataclass
-class CISSchedule(Schedule):
+class CISParser:
     
-    schedules: list[TrainSchedule]
-
     @classmethod
-    def create(cls, data: dict) -> CISSchedule:
+    def create(cls, data: dict, ts: datetime) -> list[Train]:
 
         try:
             schedule = data['schedule']
@@ -53,56 +52,18 @@ class CISSchedule(Schedule):
 
         for loc in schedule:
             try:
-                locations.append(TrainSchedule.create(loc))
+                locations.append(TrainLocations.create(loc, ts))
             except NonPassengerService as e:
                 print(e)
                 pass
 
-        return CISSchedule(
-            schedules = locations
-        )
+        return locations
 
-
-
-@dataclass
-class DarwinSchedule(Schedule):
-
-    deactivated_rid: str
+class DarwinParser:
 
     @classmethod
-    def create(cls, data: dict) -> DarwinSchedule:
-        
-        try:
-            deactivated = data['deactivated']
-        except KeyError as e:
-            raise InvalidDarwinScheduleException(f"Error when extracting schedule from: {data}") from e
-        try:
-            return DarwinSchedule(
-                deactivated_rid=deactivated["@rid"]
-            )
-        except KeyError as e:
-            raise InvalidDarwinScheduleException(f"Error when extracting data: {deactivated}") from e
-
-@dataclass
-class TrustSchedule(Schedule):
-    
-    rid: str
-    is_passenger: bool
-
-    @classmethod
-    def create(cls, data: dict) -> TrustSchedule:
-
-        try:
-            schedule = data['schedule']
-        except KeyError as e:
-            raise InvalidTrustScheduleException(f"Error when extracting schedule from: {data}") from e
-        try:
-            return TrustSchedule(
-                rid=schedule["@rid"],
-                is_passenger=schedule("@isPassengerSvc", False)
-            )
-        except KeyError as e:
-            raise InvalidTrustScheduleException(f"Error when extracting data: {schedule}") from e
+    def create(cls, data: dict, ts: datetime) -> list[Train]:
+        return [TrainDeactivated.create(data, ts)]
 
 
 @dataclass
@@ -153,12 +114,62 @@ class Location:
         except (KeyError, AttributeError) as e:
             raise InvalidCISScheduleException(f"Error when extracting data: {data}") from e
 
-
 @dataclass
-class TrainSchedule:
+class Train(ABC):
 
     rid: str
     ts: datetime
+
+    @abstractmethod
+    def as_dict(self) -> list[dict]:
+        ...
+
+
+@dataclass
+class TrainDeactivated(Train):
+
+    deactivated: bool
+
+    @classmethod
+    def create(cls, data: dict, ts: datetime) -> Train:
+        
+        try:
+            deactivated = data['deactivated']
+        except KeyError as e:
+            raise InvalidDarwinScheduleException(f"Error when extracting schedule from: {data}") from e
+        try:
+            return TrainDeactivated(
+                rid=deactivated["@rid"], 
+                deactivated=True, 
+                ts=ts
+            )
+        except KeyError as e:
+            raise InvalidDarwinScheduleException(f"Error when extracting data: {deactivated}") from e
+
+    def as_dict(self) -> list[dict]:
+        return [{"rid": self.rid, "ts": self.ts.isoformat(), "deactivated": self.deactivated}]
+
+@dataclass
+class TrainType(Train):
+
+    passenger: bool
+
+    @classmethod
+    def create(cls, data: dict, ts: datetime) -> Train:
+        
+        try:
+            rid = data['rid']
+            passenger = data['passenger']
+
+            return TrainType(rid=rid, ts=ts, passenger=passenger)
+        except KeyError as e:
+            raise InvalidDarwinScheduleException(f"Error when extracting schedule from: {data}") from e
+
+    def as_dict(self) -> list[dict]:
+        return [{"rid": self.rid, "ts": self.ts.isoformat(), "passenger": self.passenger}]
+
+@dataclass
+class TrainLocations(Train):
 
     origin: list[Location]
     destination: list[Location]
@@ -180,17 +191,17 @@ class TrainSchedule:
         return [Location.create(loc) for loc in locs]
 
     @classmethod
-    def create(cls, data: dict) -> Optional[TrainSchedule]:
+    def create(cls, data: dict, ts: datetime) -> Train:
 
         try:
             is_passenger_service = cls.parse_is_passenger_service(data)
             rid = data["@rid"]
             
             if not is_passenger_service:
-                raise NonPassengerService(f"rid: {rid} is a freight service")
+                return TrainType.create({"rid": rid, "passenger": False}, ts)
 
-            return TrainSchedule(
-                ts=datetime.now(),
+            return TrainLocations(
+                ts=ts,
                 rid=rid,
                 origin=cls._parse_locations(data['ns2:OR']),
                 destination=cls._parse_locations(data['ns2:DT']), 
@@ -198,3 +209,46 @@ class TrainSchedule:
             )
         except (KeyError, TypeError, AttributeError) as e:
             raise InvalidCISScheduleException(f"Error when extracting data: {data}") from e
+
+    def as_dict(self) -> list[dict]:
+
+        data = []
+
+        data.extend(
+            [
+                {
+                    **asdict(origin),
+                    **{
+                        "rid": self.rid,
+                        "type": "I",
+                        "ts": self.ts.isoformat()
+                    } 
+                } for origin in self.origin
+            ]
+        )
+        data.extend(
+            [
+                {
+                    **asdict(interm),
+                    **{
+                        "rid": self.rid,
+                        "type": "I",
+                        "ts": self.ts.isoformat()
+                    } 
+                } for interm in self.intermediate
+            ]
+        )
+
+        data.extend(
+            [
+                {
+                    **asdict(dest),
+                    **{
+                        "rid": self.rid,
+                        "type": "I",
+                        "ts": self.ts.isoformat()
+                    } 
+                } for dest in self.destination
+            ]
+        )
+        return data
