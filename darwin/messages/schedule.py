@@ -220,7 +220,7 @@ class TrainLocations(Train):
                     **asdict(origin),
                     **{
                         "rid": self.rid,
-                        "type": "I",
+                        "type": "O",
                         "ts": self.ts.isoformat()
                     } 
                 } for origin in self.origin
@@ -245,7 +245,7 @@ class TrainLocations(Train):
                     **asdict(dest),
                     **{
                         "rid": self.rid,
-                        "type": "I",
+                        "type": "D",
                         "ts": self.ts.isoformat()
                     } 
                 } for dest in self.destination
