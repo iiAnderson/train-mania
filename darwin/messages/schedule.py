@@ -203,8 +203,8 @@ class TrainLocations(Train):
             return TrainLocations(
                 ts=ts,
                 rid=rid,
-                origin=cls._parse_locations(data['ns2:OR']),
-                destination=cls._parse_locations(data['ns2:DT']), 
+                origin=cls._parse_locations(data.get('ns2:OR', [])),
+                destination=cls._parse_locations(data.get('ns2:DT', [])), 
                 intermediate=cls._parse_locations(data.get("ns2:IP", []))
             )
         except (KeyError, TypeError, AttributeError) as e:
