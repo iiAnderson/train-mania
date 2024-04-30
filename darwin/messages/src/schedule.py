@@ -1,5 +1,5 @@
 from __future__ import annotations
-from abc import ABC, abstractclassmethod, abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Optional
@@ -109,7 +109,7 @@ class Location:
                 tpl=data["@tpl"],
                 act=data["@act"],
                 avg_loading=data.get('@avg_loading'),
-                cancelled=data.get("@can", False)
+                cancelled=True if data.get("@can", 'false') == 'true' else False
             )
         except (KeyError, AttributeError) as e:
             raise InvalidCISScheduleException(f"Error when extracting data: {data}") from e

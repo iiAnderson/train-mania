@@ -2,10 +2,10 @@ import os
 import socket
 import time
 import click
-from messages.common import MessageType
+from messages.src.common import MessageType
 import stomp
 
-from messages.service import MessageService
+from messages.src.service import MessageService
 
 from stomp_client import StompClient
 

@@ -4,9 +4,9 @@ import json
 import os
 from typing import Optional
 
-from darwin.messages.schedule import CISParser, InvalidDarwinScheduleException, ScheduleService, ScheduleTypeNotSupported, Train
-from messages.ts import TSLocationMessage
-from messages.common import MessageType, Message
+from messages.src.schedule import InvalidDarwinScheduleException, ScheduleService, ScheduleTypeNotSupported, Train
+from messages.src.ts import TSLocationMessage
+from messages.src.common import MessageType, Message
 
 
 class MessageService:
