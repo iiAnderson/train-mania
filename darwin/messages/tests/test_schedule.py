@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 import os
-from darwin.messages.src.schedule import Location, TrainLocations
+from darwin.messages.src.schedule import InvalidCISScheduleException, InvalidDarwinScheduleException, Location, TrainDeactivated, TrainLocations, TrainType
 import pytest
 from freezegun import freeze_time
 
@@ -153,4 +153,104 @@ class TestTrainLocations():
 
         assert result == expected
 
+    def test_create__freight_service(self) -> None:
+        
+        input_dict = {
+            "@rid": "rid1",
+            "@isPassengerSvc": "false"
+        }
 
+        ts = datetime.utcnow()
+        result = TrainLocations.create(input_dict, ts)
+
+        assert result == TrainType("rid1", ts, False)
+
+    @pytest.mark.parametrize(
+        "input_dict",
+        [
+            {
+            },
+            {
+                "invalid": "rid1"
+            },
+            {
+                "@rid": "rid1",
+                "ns2:OR": "invalid_string"
+            },
+            {
+                "@rid": "rid1",
+                "ns2:DT": "invalid_string"
+            },
+            {
+                "@rid": "rid1",
+                "ns2:OR": [],
+                "ns2:DT": [],
+                "ns2:IP": "invalid_string"
+            }
+        ]
+    )
+    def test_create__invalid(self, input_dict: dict) -> None:
+
+        with pytest.raises(InvalidCISScheduleException):
+            TrainLocations.create(input_dict, datetime.now())
+
+
+@freeze_time("2024-04-30")
+class TestTrainType:
+
+    def test_create(self) -> None:
+
+        input_dict = {"rid": "rid1", "passenger": True}
+
+        assert TrainType.create(
+            input_dict, datetime(2024, 4, 30)
+        ) == TrainType("rid1", datetime(2024, 4, 30) ,True)
+
+    @pytest.mark.parametrize(
+        "input_dict",
+        [
+            {
+                "rid": "rid"
+            },
+            {
+                "passenger": False
+            }
+        ]
+    )
+    def test_create__invalid(self, input_dict: dict) -> None:
+
+        with pytest.raises(InvalidDarwinScheduleException):
+            TrainType.create(input_dict, datetime.now())
+    
+
+@freeze_time("2024-04-30")
+class TestTrainDeactivated:
+
+    def test_create(self) -> None:
+
+        input_dict = {
+            "deactivated": {
+                "@rid": "rid1"
+            }
+        }
+        ts = datetime.now()
+
+        assert TrainDeactivated.create(input_dict, ts) == \
+            TrainDeactivated("rid1", ts, deactivated=True)
+
+
+    @pytest.mark.parametrize(
+        "input_dict",
+        [
+            {
+                "invalid": {}
+            },
+            {
+                "deactivated": {"invalid": ""}
+            }
+        ]
+    )
+    def test_create__invalid(self, input_dict: dict) -> None:
+
+        with pytest.raises(InvalidDarwinScheduleException):
+            TrainDeactivated.create(input_dict, datetime.now())
