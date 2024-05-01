@@ -11,6 +11,8 @@ import xmltodict
 class NoValidMessageTypeFound(Exception):
     ...
 
+class NotURMessage(Exception): ...
+
 class MessageType(str, Enum):
 
     TS = "TS" # Actual and forecast information
@@ -62,7 +64,11 @@ class Message:
         parsed_message_type = MessageType(raw_message.message_type)
 
         try:
-            uR = raw_message.body['Pport']['uR']
+            uR = raw_message.body['Pport'].get('uR', None)
+
+            if uR is None:
+                raise NotURMessage("Message has no uR part")
+
             split_ts = raw_message.body['Pport']['@ts'].split(".")
             ts = datetime.strptime(split_ts[0], "%Y-%m-%dT%H:%M:%S")
         except:

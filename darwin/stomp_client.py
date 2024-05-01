@@ -1,5 +1,6 @@
 import sys
 import traceback
+from darwin.messages.src.common import NotURMessage
 import stomp
 import time
 import logging
@@ -46,6 +47,8 @@ class StompClient(stomp.ConnectionListener):
         except NoValidMessageTypeFound: 
             ...
         except NotLocationTSMessage:
+            ...
+        except NotURMessage:
             ...
         except Exception as e: 
             print(raw_message.body)
