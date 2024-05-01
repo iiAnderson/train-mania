@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
-from messages.src.common import Message
+from darwin.messages.src.common import Message
 
 
 class NotLocationTSMessage(Exception):

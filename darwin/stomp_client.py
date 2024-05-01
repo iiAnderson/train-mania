@@ -1,12 +1,11 @@
-import sys
 import traceback
 from darwin.messages.src.common import NotURMessage
 import stomp
 import time
 import logging
-from messages.src.common import Message, RawMessage, NoValidMessageTypeFound
-from messages.src.service import MessageService
-from messages.src.ts import NotLocationTSMessage
+from darwin.messages.src.common import Message, RawMessage, NoValidMessageTypeFound
+from darwin.service.src.message_service import MessageService
+from darwin.messages.src.ts import NotLocationTSMessage
 
 RECONNECT_DELAY_SECS = 15
 

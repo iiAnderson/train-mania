@@ -16,7 +16,7 @@ class NonPassengerService(Exception): ...
 
 class ScheduleTypeNotSupported(Exception): ...
 
-class ScheduleService:
+class ScheduleParser:
     
     @classmethod
     def create(cls, data: dict, ts: datetime) -> list[Train]:

@@ -2,12 +2,12 @@ import os
 import socket
 import time
 import click
-from messages.src.common import MessageType
+from darwin.messages.src.common import MessageType
 import stomp
 
-from messages.src.service import MessageService
+from darwin.service.src.message_service import MessageService
 
-from stomp_client import StompClient
+from darwin.stomp_client import StompClient
 
 USERNAME = os.environ['DARWIN_USERNAME']
 PASSWORD = os.environ['DARWIN_PASSWORD']
