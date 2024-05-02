@@ -52,5 +52,3 @@ class StompClient(stomp.ConnectionListener):
         except Exception as e: 
             print(raw_message.body)
             print(traceback.format_exc())
-            raise
-
