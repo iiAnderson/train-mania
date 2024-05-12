@@ -118,10 +118,16 @@ class Location:
 class Train(ABC):
 
     rid: str
+    uid: str
+    train_id: str
     ts: datetime
 
     @abstractmethod
     def as_dict(self) -> list[dict]:
+        ...
+
+    @abstractmethod
+    def as_type(self) -> str:
         ...
 
 
@@ -140,6 +146,8 @@ class TrainDeactivated(Train):
         try:
             return TrainDeactivated(
                 rid=deactivated["@rid"], 
+                uid=deactivated.get("@uid", ""),
+                train_id=deactivated.get("@trainId", ""),
                 deactivated=True, 
                 ts=ts
             )
@@ -147,7 +155,16 @@ class TrainDeactivated(Train):
             raise InvalidDarwinScheduleException(f"Error when extracting data: {deactivated}") from e
 
     def as_dict(self) -> list[dict]:
-        return [{"rid": self.rid, "ts": self.ts.isoformat(), "deactivated": self.deactivated}]
+        return [{
+            "rid": self.rid, 
+            "uid": self.uid,
+            "train_id": self.train_id, 
+            "ts": self.ts.isoformat(), 
+            "deactivated": self.deactivated
+        }]
+
+    def as_type(self) -> str:
+        return "deactivated"
 
 @dataclass
 class TrainType(Train):
@@ -159,14 +176,25 @@ class TrainType(Train):
         
         try:
             rid = data['rid']
+            uid = data.get("uid", "")
+            train_id = data.get("train_id", "")
             passenger = data['passenger']
 
-            return TrainType(rid=rid, ts=ts, passenger=passenger)
+            return TrainType(rid=rid, uid=uid, train_id=train_id, ts=ts, passenger=passenger)
         except KeyError as e:
             raise InvalidDarwinScheduleException(f"Error when extracting schedule from: {data}") from e
 
     def as_dict(self) -> list[dict]:
-        return [{"rid": self.rid, "ts": self.ts.isoformat(), "passenger": self.passenger}]
+        return [{
+            "rid": self.rid, 
+            "uid": self.uid,
+            "train_id": self.train_id, 
+            "ts": self.ts.isoformat(), 
+            "passenger": self.passenger
+        }]
+
+    def as_type(self) -> str:
+        return "type"
 
 @dataclass
 class TrainLocations(Train):
@@ -196,13 +224,22 @@ class TrainLocations(Train):
         try:
             is_passenger_service = cls.parse_is_passenger_service(data)
             rid = data["@rid"]
+            uid = data.get("@uid", "")
+            train_id = data.get("@trainId", "")
             
             if not is_passenger_service:
-                return TrainType.create({"rid": rid, "passenger": False}, ts)
+                return TrainType.create({
+                    "rid": rid, 
+                    "uid": uid,
+                    "train_id": train_id, 
+                    "passenger": False
+                }, ts)
 
             return TrainLocations(
                 ts=ts,
                 rid=rid,
+                uid=uid,
+                train_id=train_id,
                 origin=cls._parse_locations(data.get('ns2:OR', [])),
                 destination=cls._parse_locations(data.get('ns2:DT', [])), 
                 intermediate=cls._parse_locations(data.get("ns2:IP", []))
@@ -220,6 +257,8 @@ class TrainLocations(Train):
                     **asdict(origin),
                     **{
                         "rid": self.rid,
+                        "uid": self.uid,
+                        "train_id": self.train_id,
                         "type": "O",
                         "ts": self.ts.isoformat()
                     } 
@@ -232,6 +271,8 @@ class TrainLocations(Train):
                     **asdict(interm),
                     **{
                         "rid": self.rid,
+                        "uid": self.uid,
+                        "train_id": self.train_id,
                         "type": "I",
                         "ts": self.ts.isoformat()
                     } 
@@ -245,6 +286,8 @@ class TrainLocations(Train):
                     **asdict(dest),
                     **{
                         "rid": self.rid,
+                        "uid": self.uid,
+                        "train_id": self.train_id,
                         "type": "D",
                         "ts": self.ts.isoformat()
                     } 
@@ -252,3 +295,6 @@ class TrainLocations(Train):
             ]
         )
         return data
+
+    def as_type(self) -> str:
+        return "locations"

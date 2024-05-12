@@ -18,21 +18,25 @@ class MessageService:
 
     def _save_schedule(self, message: list[Train]) -> None:
 
-        if not os.path.exists(self._save_directory):
-            os.makedirs(self._save_directory)
-
         for msg in message:
 
+            msg_name = msg.as_type()
+
+            if not os.path.exists(f"{self._save_directory}/{msg_name}"):
+                os.makedirs(f"{self._save_directory}/{msg_name}")
+
             try:
-                with open(f"{self._save_directory}/{msg.rid}.json", "r") as f:
+                with open(f"{self._save_directory}/{msg_name}/{msg.rid}.json", "r") as f:
                     data = [json.loads(line) for line in f]
                     print(f"Updating file wth lines {len(data)}")
             except FileNotFoundError:
                 data = []
                 print(f"Starting new file {len(data)}")
+            
+            data.extend(msg.as_dict())
 
-            with open(f"{self._save_directory}/{msg.rid}.json", "w") as f:
-                f.write("\n".join([json.dumps(x) for x in msg.as_dict()]))
+            with open(f"{self._save_directory}/{msg_name}/{msg.rid}.json", "w") as f:
+                f.write("\n".join([json.dumps(x) for x in data]))
 
     def parse(self, message: Message) -> None: 
 

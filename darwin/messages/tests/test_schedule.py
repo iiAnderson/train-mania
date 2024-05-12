@@ -22,6 +22,8 @@ class TestTrainLocations():
                 get_json_fixture("cis_location_valid.json"),
                 TrainLocations(
                     rid="rid1",
+                    uid="uid1",
+                    train_id="abc",
                     ts=datetime(2024, 4, 30),
                     origin=[
                         Location(
@@ -75,6 +77,8 @@ class TestTrainLocations():
                 get_json_fixture("cis_location_valid_2.json"),
                 TrainLocations(
                     rid="rid1",
+                    uid="uid1",
+                    train_id="abc",
                     ts=datetime(2024, 4, 30),
                     origin=[
                         Location(
@@ -157,13 +161,15 @@ class TestTrainLocations():
         
         input_dict = {
             "@rid": "rid1",
+            "@uid": "uid1",
+            "@trainId": "abc",
             "@isPassengerSvc": "false"
         }
 
         ts = datetime.utcnow()
         result = TrainLocations.create(input_dict, ts)
 
-        assert result == TrainType("rid1", ts, False)
+        assert result == TrainType("rid1", "uid1", "abc", ts, False)
 
     @pytest.mark.parametrize(
         "input_dict",
@@ -200,11 +206,11 @@ class TestTrainType:
 
     def test_create(self) -> None:
 
-        input_dict = {"rid": "rid1", "passenger": True}
+        input_dict = {"rid": "rid1", "uid": "uid1", "train_id": "abc", "passenger": True}
 
         assert TrainType.create(
             input_dict, datetime(2024, 4, 30)
-        ) == TrainType("rid1", datetime(2024, 4, 30) ,True)
+        ) == TrainType("rid1", "uid1", "abc", datetime(2024, 4, 30) ,True)
 
     @pytest.mark.parametrize(
         "input_dict",
@@ -230,13 +236,15 @@ class TestTrainDeactivated:
 
         input_dict = {
             "deactivated": {
-                "@rid": "rid1"
+                "@rid": "rid1",
+                "@uid": "uid1",
+                "@trainId": "abc"
             }
         }
         ts = datetime.now()
 
         assert TrainDeactivated.create(input_dict, ts) == \
-            TrainDeactivated("rid1", ts, deactivated=True)
+            TrainDeactivated("rid1", "uid1", "abc", ts, deactivated=True)
 
 
     @pytest.mark.parametrize(
