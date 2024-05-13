@@ -130,6 +130,10 @@ class Train(ABC):
     def as_type(self) -> str:
         ...
 
+    @abstractmethod
+    def filter(self, tiploc: str) -> str:
+        ...
+
 
 @dataclass
 class TrainDeactivated(Train):
@@ -166,6 +170,9 @@ class TrainDeactivated(Train):
     def as_type(self) -> str:
         return "deactivated"
 
+    def filter(self, tiploc: str) -> str:
+        ...
+
 @dataclass
 class TrainType(Train):
 
@@ -196,6 +203,8 @@ class TrainType(Train):
     def as_type(self) -> str:
         return "type"
 
+    def filter(self, tiploc: str) -> str:
+        ...
 @dataclass
 class TrainLocations(Train):
 
@@ -234,6 +243,7 @@ class TrainLocations(Train):
                     "train_id": train_id, 
                     "passenger": False
                 }, ts)
+
 
             return TrainLocations(
                 ts=ts,
@@ -298,3 +308,20 @@ class TrainLocations(Train):
 
     def as_type(self) -> str:
         return "locations"
+
+    def filter(self, tiploc: str):
+
+        for location in self.origin:
+            if location.tpl == tiploc:
+                return True
+
+        for location in self.intermediate:
+            if location.tpl == tiploc:
+                return True
+
+        for location in self.destination:
+            if location.tpl == tiploc:
+                return True
+
+        return False
+

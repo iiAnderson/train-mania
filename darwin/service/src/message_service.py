@@ -20,6 +20,10 @@ class MessageService:
 
         for msg in message:
 
+            if not msg.filter("PADTON"):
+                continue
+                    
+            print(f"{msg.ts}: {msg}")
             msg_name = msg.as_type()
 
             if not os.path.exists(f"{self._save_directory}/{msg_name}"):
@@ -56,7 +60,6 @@ class MessageService:
                 msg = ScheduleParser.create(message.body, message.timestamp)
 
                 if msg:
-                    print(f"{message.timestamp}: {msg}")
                     self._save_schedule(msg)
             except ScheduleTypeNotSupported as e:
                 print(e)
