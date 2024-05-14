@@ -1,9 +1,101 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from abc import ABC, abstractclassmethod, abstractmethod
+from dataclasses import asdict, dataclass
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 
 from darwin.messages.src.common import Message
+
+
+class LocationType(Enum):
+    
+    ORIGIN = "O"
+    PASSING = "P"
+    INTERMEDIATE = "I"
+    DESTINATION = "D"
+
+@dataclass
+class NewMessage:
+
+    service: Service
+    locations: list[Location]
+    timestamp: datetime
+
+class Service:
+
+    rid: str
+    uid: str
+
+
+@dataclass
+class Location(ABC):
+    
+    tpl: str
+    type: LocationType
+
+    @abstractmethod
+    def format(self) -> dict:
+        ...
+
+    @abstractclassmethod
+    def create(self, msg: dict) -> Location:
+        ...
+
+
+@dataclass
+class OriginLocation(Location):
+
+    estimated_depature: Timestamp
+    actual_departure: Optional[Timestamp]
+    platform: Platform
+
+    def create(self, msg: dict) -> Location:
+        ...
+
+
+    def format(self) -> dict:
+        return {
+            "location_type": str(self.type),
+            "tpl": self.tpl,
+            "estimated_departure": asdict(self.estimated_depature),
+            "actual_departure": asdict(self.actual_departure) if self.actual_departure else None,
+            "platform": asdict(self.platform)
+        }
+
+
+@dataclass
+class PassingLocation(Location):
+
+    estimated_passing: Timestamp
+    actual_passing: Optional[Timestamp]
+
+    def format(self) -> dict:
+        ...
+
+@dataclass
+class IntermediateLocation(Location):
+
+    estimated_arrival: Timestamp
+    actual_arrival: Optional[Timestamp]
+
+    estimated_depature: Timestamp
+    actual_departure: Optional[Timestamp]
+    platform: Platform
+
+    def format(self) -> dict:
+        ...
+
+@dataclass
+class DestinationLocation(Location):
+
+    estimated_arrival: Timestamp
+    actual_arrival: Optional[Timestamp]
+    platform: Platform
+
+    def to_dict(self) -> dict:
+        ...
+
 
 
 class NotLocationTSMessage(Exception):

@@ -48,6 +48,7 @@ class MessageService:
             return
 
         if message.message_type == MessageType.TS:
+            print(message.body)
             ts_msg = TSLocationMessage.create(message)
             
             if ts_msg.filter_for("PADTON"):
