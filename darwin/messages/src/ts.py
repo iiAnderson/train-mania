@@ -7,6 +7,13 @@ from typing import Optional
 
 from darwin.messages.src.common import Message
 
+class InvalidPassingLocation(Exception): ...
+
+class InvalidIntermediateTimestamp(Exception): ...
+
+class InvalidIntermediatePlatform(Exception): ...
+
+class IncorrectMessageFormat(Exception): ...
 
 class LocationType(Enum):
     
@@ -16,116 +23,27 @@ class LocationType(Enum):
     DESTINATION = "D"
 
 @dataclass
-class NewMessage:
-
-    service: Service
-    locations: list[Location]
-    timestamp: datetime
-
 class Service:
 
     rid: str
     uid: str
 
-
 @dataclass
-class Location(ABC):
-    
-    tpl: str
-    type: LocationType
+class LocationTimestamp:
 
-    @abstractmethod
-    def format(self) -> dict:
-        ...
-
-    @classmethod
-    @abstractmethod
-    def create(self, msg: dict) -> Location:
-        ...
-
-
-@dataclass
-class OriginLocation(Location):
-
-    estimated_depature: Timestamp
-    actual_departure: Optional[Timestamp]
-    platform: Platform
-
-    @classmethod
-    def create(self, msg: dict) -> Location:
-        ...
-
+    ts: str
+    src: str
+    delayed: bool
+    status: Status
 
     def format(self) -> dict:
+
         return {
-            "location_type": str(self.type),
-            "tpl": self.tpl,
-            "estimated_departure": asdict(self.estimated_depature),
-            "actual_departure": asdict(self.actual_departure) if self.actual_departure else None,
-            "platform": asdict(self.platform)
+            "ts": self.ts,
+            "src": self.src,
+            "delayed": self.delayed,
+            "status": self.status.value
         }
-
-
-@dataclass
-class PassingLocation(Location):
-
-    estimated_passing: Timestamp
-    actual_passing: Optional[Timestamp]
-
-    @classmethod
-    def create(self, msg: dict) -> Location:
-        ...
-
-    def format(self) -> dict:
-        ...
-
-@dataclass
-class IntermediateLocation(Location):
-
-    estimated_arrival: Timestamp
-    actual_arrival: Optional[Timestamp]
-
-    estimated_depature: Timestamp
-    actual_departure: Optional[Timestamp]
-    platform: Platform
-
-    @classmethod
-    def create(self, msg: dict) -> Location:
-        ...
-
-    def format(self) -> dict:
-        ...
-
-@dataclass
-class DestinationLocation(Location):
-
-    estimated_arrival: Timestamp
-    actual_arrival: Optional[Timestamp]
-    platform: Platform
-
-    @classmethod
-    def create(self, msg: dict) -> Location:
-        ...
-
-    def format(self) -> dict:
-        ...
-
-
-
-class NotLocationTSMessage(Exception):
-    ...
-
-class TSLocation:
-
-    tpl: str
-
-    @classmethod
-    def create(cls, body: dict) -> TSLocation:
-
-        if 'ns5:pass' in body:
-            return PassingTSLocation.create(body)
-
-        return StoppingTSLocation.create(body)
 
 @dataclass
 class Platform:
@@ -134,180 +52,48 @@ class Platform:
     confirmed: bool
     text: str
 
-
-@dataclass
-class Schedule:
-
-    arrrival: Optional[str] = None
-    departure: Optional[str] = None
-    passing: Optional[str] = None
+class Status(Enum):
+    ESTIMATED = "estimated"
+    ACTUAL = "actual"
 
 
-@dataclass
-class Timestamp:
-
-    time: str
-    status: str
-    src: str
-    delayed: bool = False
-
-
-@dataclass
-class StoppingTSLocation(TSLocation):
-
-    tpl: str
-    schedule: Schedule
-    arrival: Optional[Timestamp]
-    departure: Optional[Timestamp]
-    platform: Optional[Platform]
+class TSService:
 
     @classmethod
-    def parse_est_arr(cls, body: dict) -> Optional[Timestamp]:
+    def create_location(cls, loc: dict) -> Location:
 
-        if 'ns5:arr' not in body:
-            return None
-
-        est_arr = body['ns5:arr']
-
-        at = est_arr.get('@at')
-        et = est_arr.get('@et')
-
-        src = est_arr.get('@src')
-        delayed = bool(est_arr.get("@delayed", False))
-
-        return Timestamp(
-            at if at else et,
-            "actual" if at else "estimated",
-            src,
-            delayed
-        )
-
-    @classmethod
-    def parse_est_dep(cls, body: dict) -> Optional[Timestamp]:
-
-        if 'ns5:dep' not in body:
-            return None
-
-        est_dep = body['ns5:dep']
-
-        at = est_dep.get('@at')
-        et = est_dep.get('@et')
-
-        src = est_dep.get('@src')
-        delayed = bool(est_dep.get("@delayed", False))
-
-        return Timestamp(
-            at if at else et,
-            "actual" if at else "estimated",
-            src,
-            delayed
-        )
-
-    @classmethod
-    def parse_est_plat(cls, body: dict) -> Optional[Platform]:
-
-        if 'ns5:plat' not in body:
-            return None
-
-        est_plat = body['ns5:plat']
-
-        if type(est_plat) == str:
-            return Platform("unknown", False, est_plat)
-
-        src = est_plat.get('@platsrc')
-        confirmed = bool(est_plat.get('@conf', False))
-        text = est_plat.get('#text')
-
-        return Platform(src, confirmed, text)
-
-    @classmethod
-    def create(cls, body: dict) -> StoppingTSLocation:
+        if 'ns5:pass' in loc:
+            return PassingLocation.create(loc)
         
-        tpl = body['@tpl']
-        wta = body.get('@wta')
-        wtd = body.get('@wtd')
-
-        est_arr = cls.parse_est_arr(body)
-        est_dep = cls.parse_est_dep(body)
-        est_plat = cls.parse_est_plat(body)
-
-        return StoppingTSLocation(
-            tpl=tpl, 
-            schedule=Schedule(wta, wtd), 
-            arrival=est_arr, 
-            departure=est_dep, 
-            platform=est_plat
-        )
-
-
-@dataclass
-class PassingTSLocation(TSLocation):
-
-    tpl: str
-    working_passing: Optional[str]
-    estimated_pass: Optional[Timestamp] 
+        return StoppingLocation.create(loc)
 
     @classmethod
-    def parse_est_pass(cls, body: dict) -> Optional[Timestamp]:
+    def parse(cls, msg: Message) -> TSMessage:
 
-        if 'ns5:pass' not in body:
-            return None
-
-        est_dep = body['ns5:pass']
-
-        at = est_dep.get('@at')
-        et = est_dep.get('@et')
-
-        src = est_dep.get('@src')
-        delayed = bool(est_dep.get("@delayed", False))
-
-        return Timestamp(
-            at if at else et,
-            "actual" if at else "estimated",
-            src,
-            delayed
-        )
-
-    @classmethod
-    def create(cls, body: dict) -> PassingTSLocation:
-        
-        tpl = body['@tpl']
-        wtp = body.get('@wtp')
-
-        estimated_pass = cls.parse_est_pass(body)
-
-        return PassingTSLocation(
-            tpl=tpl, 
-            working_passing=wtp,
-            estimated_pass=estimated_pass
-        )
-
-@dataclass
-class TSLocationMessage:
-
-    rid: str # rail id
-    locations: list[TSLocation]
-    timestamp: datetime
-
-    @classmethod
-    def create(cls, message: Message) -> TSLocationMessage:
-
-        ts = message.body['TS']
+        ts = msg.body['TS']
 
         rid = ts['@rid']
+        uid = ts['@uid']
         locs = ts.get('ns5:Location')
 
         if not locs:
-            raise NotLocationTSMessage(f"Not TS Location message")
+            raise IncorrectMessageFormat(f"Not TS new message: {msg}")
 
         if type(locs) != list:
             locs = [locs]
 
-        parsed_locs = []
-        for loc in locs:
-            parsed_locs.append(TSLocation.create(loc))
+        return TSMessage(
+            service=Service(rid=rid, uid=uid),
+            locations=[cls.create_location(loc) for loc in locs],
+            timestamp=msg.timestamp
+        )
 
-        return cls(rid, parsed_locs, message.timestamp)
+@dataclass
+class TSMessage:
+
+    service: Service
+    locations: list[Location]
+    timestamp: datetime
 
     def get_stations(self) -> str:
         ts = self.timestamp.strftime("%H:%M:%S")
@@ -323,11 +109,153 @@ class TSLocationMessage:
     @property
     def destination(self) -> str:
         dest = self.locations[-1]
-
         return dest.tpl
         
     @property
     def current(self) -> str:
         loc = self.locations[0]
-
         return loc.tpl
+    
+    def format(self) -> list[dict]:
+
+        return [
+            {
+                **{
+                    "rid": self.service.rid,
+                    "uid": self.service.uid,
+                    "ts": self.timestamp.isoformat()
+                }, 
+                **loc.format()
+            }
+            for loc in self.locations
+        ]
+
+@dataclass
+class Location(ABC):
+    
+    tpl: str
+
+    @abstractmethod
+    def format(self) -> dict:
+        ...
+
+    @classmethod
+    @abstractmethod
+    def create(self, msg: dict) -> Location:
+        ...
+
+
+@dataclass
+class PassingLocation(Location):
+
+    passing: LocationTimestamp
+
+    @classmethod
+    def create(self, msg: dict) -> Location:
+
+        tpl = msg['@tpl']
+    
+        if 'ns5:pass' not in msg:
+            raise InvalidPassingLocation(f"Invalid message, no ns5:pass {msg}")
+
+        est_dep = msg['ns5:pass']
+
+        actual_ts = est_dep.get('@at')
+        estimated_ts = est_dep.get('@et')
+
+        src = est_dep.get('@src')
+        delayed = bool(est_dep.get("@delayed", False))
+
+        return PassingLocation(
+            tpl=tpl,
+            passing=LocationTimestamp(
+                ts=actual_ts if actual_ts else estimated_ts,
+                src=src,
+                delayed=delayed,
+                status=Status.ACTUAL if actual_ts else Status.ESTIMATED
+            )
+        )
+
+    def format(self) -> dict:
+        return {
+            "location_type": str(LocationType.PASSING),
+            "tpl": self.tpl,
+            "departure": self.passing.format() if self.passing else None
+        }
+
+@dataclass
+class StoppingLocation(Location):
+
+    arrival: Optional[LocationTimestamp]
+    departure: Optional[LocationTimestamp]
+    
+    platform: Optional[Platform]
+
+    @classmethod
+    def parse_timestamp(cls, body: Optional[dict]) -> Optional[LocationTimestamp]:
+
+        if not body:
+            return None
+
+        actual_ts = body.get('@at')
+        estimated_ts = body.get('@et')
+
+        src = body.get('@src')
+        delayed = bool(body.get("@delayed", False))
+
+        return LocationTimestamp(
+            ts= actual_ts if actual_ts else estimated_ts,
+            src=src,
+            delayed=delayed,
+            status=Status.ACTUAL if actual_ts else Status.ESTIMATED
+        )
+
+    @classmethod
+    def parse_platform(cls, platform: dict) -> Optional[Platform]:
+
+        if not platform:
+            return None
+
+        if type(platform) == str:
+            return Platform("unknown", False, platform)
+
+        src = platform.get('@platsrc')
+        confirmed = bool(platform.get('@conf', False))
+        text = platform.get('#text')
+
+        return Platform(src, confirmed, text)
+
+    @classmethod
+    def create(cls, msg: dict) -> Location:
+
+        tpl = msg['@tpl']
+
+        arr = cls.parse_timestamp(msg.get('ns5:arr'))
+        dep = cls.parse_timestamp(msg.get('ns5:dep'))
+
+        plat = cls.parse_platform(msg.get('ns5:plat'))
+
+        return StoppingLocation(
+            tpl=tpl,
+            arrival=arr,
+            departure=dep,
+            platform=plat
+        )
+
+    def _type(self) -> LocationType:
+
+        if self.arrival and not self.departure:
+            return LocationType.DESTINATION
+        if not self.arrival and self.departure:
+            return LocationType.ORIGIN
+        
+        return LocationType.INTERMEDIATE
+
+    def format(self) -> dict:
+        return {
+            "location_type": str(self._type()),
+            "tpl": self.tpl,
+            "arrival": self.arrival.format() if self.arrival else None,
+            "departure": self.departure.format() if self.departure else None,
+            "platform": asdict(self.platform) if self.platform else None
+        }

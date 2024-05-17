@@ -5,7 +5,7 @@ import os
 from typing import Optional
 
 from darwin.messages.src.schedule import InvalidDarwinScheduleException, ScheduleParser, ScheduleTypeNotSupported, Train
-from darwin.messages.src.ts import TSLocationMessage
+from darwin.messages.src.ts import TSMessage, TSService
 from darwin.messages.src.common import MessageType, Message
 
 
@@ -42,18 +42,41 @@ class MessageService:
             with open(f"{self._save_directory}/{msg_name}/{msg.rid}.json", "w") as f:
                 f.write("\n".join([json.dumps(x) for x in data]))
 
+    def _save_ts(self, message: TSMessage) -> None:
+
+        if not message.filter_for("PADTON"):
+            return
+        
+        if not os.path.exists(f"{self._save_directory}/"):
+            os.makedirs(f"{self._save_directory}/")
+
+        try:
+            with open(f"{self._save_directory}/{message.service.uid}.json", "r") as f:
+                data = [json.loads(line) for line in f]
+                print(f"Updating file wth lines {len(data)}")
+        except FileNotFoundError:
+            data = []
+            print(f"Starting new file {len(data)}")
+        
+        data.extend(message.format())
+
+        with open(f"{self._save_directory}/{message.service.uid}.json", "w") as f:
+            f.write("\n".join([json.dumps(x) for x in data]))
+
     def parse(self, message: Message) -> None: 
 
         if self._message_filter and self._message_filter != message.message_type:
             return
 
         if message.message_type == MessageType.TS:
-            print(message.body)
-            ts_msg = TSLocationMessage.create(message)
-            
-            if ts_msg.filter_for("PADTON"):
+            # print(message.body)
+            ts_msg = TSService.parse(message)
 
-                print(f"{ts_msg.rid}: {ts_msg.current} -> {ts_msg.destination}")
+            self._save_ts(ts_msg)
+            
+            if ts_msg.filter_for("SOTON"):
+                print(f"{ts_msg.service.uid}: {ts_msg.current} -> {ts_msg.destination}")
+                print(ts_msg.format())
         
         elif message.message_type == MessageType.SC:
             

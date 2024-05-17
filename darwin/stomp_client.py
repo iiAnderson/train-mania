@@ -5,7 +5,8 @@ import time
 import logging
 from darwin.messages.src.common import Message, RawMessage, NoValidMessageTypeFound
 from darwin.service.src.message_service import MessageService
-from darwin.messages.src.ts import NotLocationTSMessage
+from darwin.messages.src.ts import IncorrectMessageFormat
+
 
 RECONNECT_DELAY_SECS = 15
 
@@ -45,7 +46,7 @@ class StompClient(stomp.ConnectionListener):
             self._message_service.parse(msg)
         except NoValidMessageTypeFound: 
             ...
-        except NotLocationTSMessage:
+        except IncorrectMessageFormat:
             ...
         except NotURMessage:
             ...
