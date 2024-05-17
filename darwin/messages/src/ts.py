@@ -38,7 +38,8 @@ class Location(ABC):
     def format(self) -> dict:
         ...
 
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def create(self, msg: dict) -> Location:
         ...
 
@@ -50,6 +51,7 @@ class OriginLocation(Location):
     actual_departure: Optional[Timestamp]
     platform: Platform
 
+    @classmethod
     def create(self, msg: dict) -> Location:
         ...
 
@@ -70,6 +72,10 @@ class PassingLocation(Location):
     estimated_passing: Timestamp
     actual_passing: Optional[Timestamp]
 
+    @classmethod
+    def create(self, msg: dict) -> Location:
+        ...
+
     def format(self) -> dict:
         ...
 
@@ -83,6 +89,10 @@ class IntermediateLocation(Location):
     actual_departure: Optional[Timestamp]
     platform: Platform
 
+    @classmethod
+    def create(self, msg: dict) -> Location:
+        ...
+
     def format(self) -> dict:
         ...
 
@@ -93,7 +103,11 @@ class DestinationLocation(Location):
     actual_arrival: Optional[Timestamp]
     platform: Platform
 
-    def to_dict(self) -> dict:
+    @classmethod
+    def create(self, msg: dict) -> Location:
+        ...
+
+    def format(self) -> dict:
         ...
 
 
