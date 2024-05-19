@@ -44,7 +44,7 @@ class MessageService:
 
     def _save_ts(self, message: TSMessage) -> None:
 
-        if not message.filter_for("PADTON"):
+        if not message.filter_for("BRSTLTM"):
             return
         
         if not os.path.exists(f"{self._save_directory}/"):
@@ -74,7 +74,7 @@ class MessageService:
 
             self._save_ts(ts_msg)
             
-            if ts_msg.filter_for("SOTON"):
+            if ts_msg.filter_for("BRSTLTM"):
                 print(f"{ts_msg.service.uid}: {ts_msg.current} -> {ts_msg.destination}")
                 print(ts_msg.format())
         
