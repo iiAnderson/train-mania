@@ -69,7 +69,6 @@ class MessageService:
             return
 
         if message.message_type == MessageType.TS:
-            # print(message.body)
             ts_msg = TSService.parse(message)
 
             self._save_ts(ts_msg)
