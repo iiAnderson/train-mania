@@ -178,7 +178,7 @@ class PassingLocation(Location):
 
     def format(self) -> dict:
         return {
-            "location_type": str(LocationType.PASSING),
+            "location_type": str(LocationType.PASSING.value),
             "tpl": self.tpl,
             "departure": self.passing.format() if self.passing else None
         }
@@ -253,7 +253,7 @@ class StoppingLocation(Location):
 
     def format(self) -> dict:
         return {
-            "location_type": str(self._type()),
+            "location_type": str(self._type().value),
             "tpl": self.tpl,
             "arrival": self.arrival.format() if self.arrival else None,
             "departure": self.departure.format() if self.departure else None,
