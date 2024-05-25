@@ -13,8 +13,8 @@ class Base(DeclarativeBase):
 class Service(Base):
     __tablename__ = "service"
 
-    rid: Mapped[str] = mapped_column(primary_key=True)
-    uid: Mapped[str] = mapped_column(String(30))
+    rid: Mapped[str] = mapped_column(String(30), primary_key=True)
+    uid: Mapped[str] = mapped_column(String(10))
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     def __repr__(self) -> str:
@@ -24,7 +24,7 @@ class Service(Base):
 class ServiceUpdate(Base):
     __tablename__ = "service_update"
 
-    update_id: Mapped[str] = mapped_column(String(30))
+    update_id: Mapped[str] = mapped_column(String(30), primary_key=True)
     rid: Mapped[str] = mapped_column(ForeignKey("service.rid"))
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
@@ -35,10 +35,10 @@ class ServiceUpdate(Base):
 class Timestamp(Base):
     __tablename__ = "timestamp"
 
-    id: Mapped[str] = mapped_column(String(30))
+    ts_id: Mapped[str] = mapped_column(String(30), primary_key=True)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     src: Mapped[str] = mapped_column(String(30))
-    deplayed: Mapped[bool] = mapped_column(Boolean())
+    delayed: Mapped[bool] = mapped_column(Boolean())
     status: Mapped[str] = mapped_column(String(30))
 
     def __repr__(self) -> str:
@@ -48,7 +48,7 @@ class Timestamp(Base):
 class Platform(Base):
     __tablename__ = "platform"
 
-    id: Mapped[str] = mapped_column(String(30))
+    plat_id: Mapped[str] = mapped_column(String(30), primary_key=True)
     src: Mapped[str] = mapped_column(String(30))
     confirmed: Mapped[bool] = mapped_column(Boolean())
     text: Mapped[str] = mapped_column(String(30))
@@ -60,6 +60,7 @@ class Platform(Base):
 class Location(Base):
     __tablename__ = "location"
 
+    loc_id: Mapped[str] = mapped_column(String(30), primary_key=True)
     update_id: Mapped[str] = mapped_column(ForeignKey("service_update.update_id"))
     toc: Mapped[str] = mapped_column(String(10))
 

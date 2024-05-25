@@ -6,7 +6,7 @@ authors = ["Robbie Anderson <iiAnderson@hotmail.co.uk>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "~3.8"
+python = "~3.11"
 stomp-py = "^8.1.0"
 pyxb = "^1.2.6"
 xmltodict = "^0.13.0"
@@ -14,6 +14,7 @@ click = "^8.1.6"
 pytest = "^8.2.0"
 freezegun = "^1.5.0"
 sqlalchemy = "^2.0.30"
+psycopg2-binary = "^2.9.9"
 
 
 [build-system]
