@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import ForeignKey
-from sqlalchemy import String, DateTime, Boolean
+from sqlalchemy import String, DateTime, Boolean, BigInteger
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
@@ -25,7 +25,7 @@ class Service(Base):
 class ServiceUpdate(Base):
     __tablename__ = "service_update"
 
-    update_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    update_id: Mapped[int] = mapped_column(BigInteger(), primary_key=True)
     rid: Mapped[str] = mapped_column(ForeignKey("service.rid"))
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
@@ -39,14 +39,14 @@ class ServiceUpdate(Base):
 class Timestamp(Base):
     __tablename__ = "timestamp"
 
-    ts_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    ts_id: Mapped[int] = mapped_column(BigInteger(), primary_key=True)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     src: Mapped[str] = mapped_column(String(30))
     delayed: Mapped[bool] = mapped_column(Boolean())
     status: Mapped[str] = mapped_column(String(30))
 
     arr_location: Mapped["Location"] = relationship(back_populates="arrival")
-    dep_location: Mapped["Location"] = relationship(back_populates="departure")
+    # dep_location: Mapped["Location"] = relationship(back_populates="departure")
 
 
     def __repr__(self) -> str:
@@ -56,7 +56,7 @@ class Timestamp(Base):
 class Platform(Base):
     __tablename__ = "platform"
 
-    plat_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    plat_id: Mapped[int] = mapped_column(BigInteger(), primary_key=True)
     src: Mapped[str] = mapped_column(String(30))
     confirmed: Mapped[bool] = mapped_column(Boolean())
     text: Mapped[str] = mapped_column(String(30))
@@ -70,17 +70,17 @@ class Platform(Base):
 class Location(Base):
     __tablename__ = "location"
 
-    loc_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    loc_id: Mapped[int] = mapped_column(BigInteger(), primary_key=True)
     update_id: Mapped[str] = mapped_column(ForeignKey("service_update.update_id"))
     toc: Mapped[str] = mapped_column(String(10))
 
     arrival_id: Mapped[str] = mapped_column(ForeignKey("timestamp.ts_id"))
-    departure_id: Mapped[str] = mapped_column(ForeignKey("timestamp.ts_id"))
-    platform_id: Mapped[str] = mapped_column(ForeignKey("timestamp.ts_id"))
+    # departure_id: Mapped[str] = mapped_column(ForeignKey("timestamp.ts_id"))
+    platform_id: Mapped[str] = mapped_column(ForeignKey("platform.plat_id"))
 
-    arrival: Mapped["Timestamp"] = relationship(back_populates="location")
-    departure: Mapped["Timestamp"] = relationship(back_populates="location")
-    platform: Mapped["Timestamp"] = relationship(back_populates="location")
+    arrival: Mapped["Timestamp"] = relationship(back_populates="arr_location")
+    # departure: Mapped["Timestamp"] = relationship(back_populates="dep_location")
+    platform: Mapped["Platform"] = relationship(back_populates="location")
     update: Mapped["ServiceUpdate"] = relationship(back_populates="location")
 
 

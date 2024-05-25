@@ -1,8 +1,9 @@
 
 from __future__ import annotations
-from darwin.messages.src.ts import Location, Service, ServiceUpdate
+from darwin.messages.src.ts import ServiceUpdate
 from sqlalchemy import Engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
 
 class DatabaseRepositoryInterface:
 
@@ -20,10 +21,13 @@ class DatabaseRepository(DatabaseRepositoryInterface):
 
     def save_service_update(self, service_update: ServiceUpdate) -> None:
         with self._session.begin() as session:
+            
             session.add(service_update.to_orm())
             session.commit()
 
     @classmethod
     def create(self, password: str) -> DatabaseRepository:
-
+        return DatabaseRepository(
+            engine=create_engine(f"postgresql://postgres:{password}@127.0.0.1:5436/postgres")
+        )
         

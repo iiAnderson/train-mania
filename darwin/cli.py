@@ -3,6 +3,7 @@ import socket
 import time
 import click
 from darwin.messages.src.common import MessageType
+from darwin.repository.db import DatabaseRepository
 import stomp
 
 from darwin.service.src.message_service import MessageService
@@ -45,7 +46,7 @@ def main(message_type: str, rid: str) -> None:
         heart_beat_receive_scale=2.5
     )
 
-    msg_service = MessageService(message_filter=MessageType.TS)
+    msg_service = MessageService(DatabaseRepository.create(password="tr4in_m4ni4"), message_filter=MessageType.TS)
 
     conn.set_listener('', StompClient(msg_service))
 

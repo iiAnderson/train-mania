@@ -7,14 +7,16 @@ from typing import Optional
 from darwin.messages.src.schedule import InvalidDarwinScheduleException, ScheduleParser, ScheduleTypeNotSupported, Train
 from darwin.messages.src.ts import TSMessage, TSService
 from darwin.messages.src.common import MessageType, Message
+from darwin.repository.db import DatabaseRepository
 
 
 class MessageService:
 
-    def __init__(self, message_filter: Optional[MessageType] = None) -> None:
+    def __init__(self, repository: DatabaseRepository, message_filter: Optional[MessageType] = None) -> None:
 
         self._message_filter = message_filter
         self._save_directory = "train_info"
+        self._repository = repository
 
     def _save_schedule(self, message: list[Train]) -> None:
 
@@ -76,6 +78,7 @@ class MessageService:
             if ts_msg.filter_for("BRSTLTM"):
                 print(f"{ts_msg.service.uid}: {ts_msg.current} -> {ts_msg.destination}")
                 print(ts_msg.format())
+                self._repository.save_service_update(ts_msg.service)
         
         elif message.message_type == MessageType.SC:
             

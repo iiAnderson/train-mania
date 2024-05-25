@@ -44,8 +44,8 @@ class ServiceUpdate:
     ts: datetime
 
     def to_orm(self) -> db_model.ServiceUpdate:
-        return db_model.Service(
-            rid=self.service,
+        return db_model.ServiceUpdate(
+            service=self.service.to_orm(),
             ts=self.ts
         )
 
@@ -224,10 +224,8 @@ class PassingLocation(Location):
             "departure": self.passing.format() if self.passing else None
         }
 
-    def to_orm(self) -> db_model.Platform:
-        return db_model.Location(
-            
-        )
+    def to_orm(self) -> db_model.Location:
+        ...
 
 @dataclass
 class StoppingLocation(Location):
@@ -305,3 +303,6 @@ class StoppingLocation(Location):
             "departure": self.departure.format() if self.departure else None,
             "platform": asdict(self.platform) if self.platform else None
         }
+
+    def to_orm(self) -> db_model.Location:
+        ...
