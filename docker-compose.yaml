@@ -10,6 +10,11 @@ services:
       - ./postgres-data:/var/lib/postgresql/data
     ports:
       - 5436:5432
+    networks:
+      - app-network
 
 volumes:
   pgdata:
+networks:
+  app-network:
+    driver: bridge
