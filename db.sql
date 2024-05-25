@@ -1,7 +1,6 @@
 create table service (
     rid varchar(30) UNIQUE NOT NULL,
     uid varchar(10) UNIQUE NOT NULL,
-    ts TIMESTAMP NOT NULL,
     PRIMARY KEY(rid)
 );
 create table service_update (

@@ -4,6 +4,8 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Optional
+import darwin.service.src.model as db_model
+
 
 from darwin.messages.src.common import Message
 
@@ -28,6 +30,26 @@ class Service:
     rid: str
     uid: str
 
+    def to_orm(self) -> db_model.Service:
+        return db_model.Service(
+            rid=self.rid,
+            uid=self.uid
+        )
+
+
+@dataclass
+class ServiceUpdate:
+
+    service: Service
+    ts: datetime
+
+    def to_orm(self) -> db_model.ServiceUpdate:
+        return db_model.Service(
+            rid=self.service,
+            ts=self.ts
+        )
+
+
 @dataclass
 class LocationTimestamp:
 
@@ -45,12 +67,27 @@ class LocationTimestamp:
             "status": self.status.value
         }
 
+    def to_orm(self) -> db_model.Timestamp:
+        return db_model.Timestamp(
+            ts=datetime.fromisoformat(self.ts),
+            src=self.src,
+            delayed=self.delayed,
+            status=self.status
+        )
+
 @dataclass
 class Platform:
 
     src: str
     confirmed: bool
     text: str
+
+    def to_orm(self) -> db_model.Platform:
+        return db_model.Platform(
+            src=self.src,
+            confirmed=self.confirmed,
+            text=self.text
+        )
 
 class Status(Enum):
     ESTIMATED = "estimated"
@@ -91,7 +128,7 @@ class TSService:
 @dataclass
 class TSMessage:
 
-    service: Service
+    service: ServiceUpdate
     locations: list[Location]
     timestamp: datetime
 
@@ -139,6 +176,10 @@ class Location(ABC):
     def format(self) -> dict:
         ...
 
+    @abstractmethod
+    def to_orm(self) -> db_model.Location:
+        ...
+
     @classmethod
     @abstractmethod
     def create(self, msg: dict) -> Location:
@@ -182,6 +223,11 @@ class PassingLocation(Location):
             "tpl": self.tpl,
             "departure": self.passing.format() if self.passing else None
         }
+
+    def to_orm(self) -> db_model.Platform:
+        return db_model.Location(
+            
+        )
 
 @dataclass
 class StoppingLocation(Location):
