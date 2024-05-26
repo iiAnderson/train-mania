@@ -79,6 +79,7 @@ class MessageService:
                 print(f"{ts_msg.service.uid}: {ts_msg.current} -> {ts_msg.destination}")
                 print(ts_msg.format())
                 self._repository.save_service_update(ts_msg.service)
+                self._repository.save_location(ts_msg.locations)
         
         elif message.message_type == MessageType.SC:
             

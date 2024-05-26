@@ -225,7 +225,10 @@ class PassingLocation(Location):
         }
 
     def to_orm(self) -> db_model.Location:
-        ...
+        return db_model.Location(
+            toc=self.tpl,
+            departure=self.passing.to_orm()
+        )
 
 @dataclass
 class StoppingLocation(Location):
@@ -305,4 +308,9 @@ class StoppingLocation(Location):
         }
 
     def to_orm(self) -> db_model.Location:
-        ...
+        return db_model.Location(
+            toc=self.tpl,
+            departure=self.departure.to_orm() if self.departure else None,
+            arrival=self.arrival.to_orm() if self.arrival else None,
+            platform=self.platform.to_orm() if self.platform else None
+        )

@@ -1,4 +1,7 @@
+from __future__ import annotations
+from abc import ABC, abstractmethod
 from datetime import datetime
+from typing import Any
 from sqlalchemy import ForeignKey
 from sqlalchemy import String, DateTime, Boolean, BigInteger
 from sqlalchemy.orm import DeclarativeBase
@@ -8,7 +11,7 @@ from sqlalchemy.orm import mapped_column, relationship
 
 class Base(DeclarativeBase):
     pass
-
+    
 
 class Service(Base):
     __tablename__ = "service"
