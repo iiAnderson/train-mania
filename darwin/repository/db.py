@@ -19,7 +19,7 @@ class DatabaseRepository(DatabaseRepositoryInterface):
     def __init__(self, engine: Engine) -> None:
         self._session = sessionmaker(engine)
 
-    def save_service_update(self, service_update: ServiceUpdate) -> None:
+    def save_service_update(self, service_update: ServiceUpdate) -> ServiceUpdate:
         with self._session.begin() as session:
             
             session.add(service_update.to_orm())

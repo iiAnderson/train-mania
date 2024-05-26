@@ -45,10 +45,6 @@ class Timestamp(Base):
     delayed: Mapped[bool] = mapped_column(Boolean())
     status: Mapped[str] = mapped_column(String(30))
 
-    arr_location: Mapped["Location"] = relationship(back_populates="arrival")
-    # dep_location: Mapped["Location"] = relationship(back_populates="departure")
-
-
     def __repr__(self) -> str:
         return f"Timestamp(id={self.id!r}, status={self.status!r}, ts={self.ts!r})"
 
@@ -75,12 +71,14 @@ class Location(Base):
     toc: Mapped[str] = mapped_column(String(10))
 
     arrival_id: Mapped[str] = mapped_column(ForeignKey("timestamp.ts_id"))
-    # departure_id: Mapped[str] = mapped_column(ForeignKey("timestamp.ts_id"))
-    platform_id: Mapped[str] = mapped_column(ForeignKey("platform.plat_id"))
+    arrival: Mapped["Timestamp"] = relationship(foreign_keys=arrival_id)
 
-    arrival: Mapped["Timestamp"] = relationship(back_populates="arr_location")
-    # departure: Mapped["Timestamp"] = relationship(back_populates="dep_location")
+    departure_id: Mapped[str] = mapped_column(ForeignKey("timestamp.ts_id"))
+    departure: Mapped["Timestamp"] = relationship(foreign_keys=departure_id)
+
+    platform_id: Mapped[str] = mapped_column(ForeignKey("platform.plat_id"))
     platform: Mapped["Platform"] = relationship(back_populates="location")
+
     update: Mapped["ServiceUpdate"] = relationship(back_populates="location")
 
 
