@@ -71,7 +71,7 @@ class Location(Base):
 
     loc_id: Mapped[int] = mapped_column(BigInteger(), primary_key=True)
     update_id: Mapped[str] = mapped_column(ForeignKey("service_update.update_id"))
-    toc: Mapped[str] = mapped_column(String(10))
+    tpl: Mapped[str] = mapped_column(String(10))
 
     arrival_id: Mapped[str] = mapped_column(ForeignKey("timestamp.ts_id"))
     arrival: Mapped["Timestamp"] = relationship(foreign_keys=arrival_id)
@@ -86,4 +86,4 @@ class Location(Base):
 
 
     def __repr__(self) -> str:
-        return f"Location(update_id={self.update_id!r}, toc={self.toc!r})"
+        return f"Location(update_id={self.update_id!r}, toc={self.tpl!r})"

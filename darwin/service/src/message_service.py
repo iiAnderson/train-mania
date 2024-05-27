@@ -53,7 +53,7 @@ class MessageService:
             os.makedirs(f"{self._save_directory}/")
 
         try:
-            with open(f"{self._save_directory}/{message.service.uid}.json", "r") as f:
+            with open(f"{self._save_directory}/{message.update.service.uid}.json", "r") as f:
                 data = [json.loads(line) for line in f]
                 print(f"Updating file wth lines {len(data)}")
         except FileNotFoundError:
@@ -62,7 +62,7 @@ class MessageService:
         
         data.extend(message.format())
 
-        with open(f"{self._save_directory}/{message.service.uid}.json", "w") as f:
+        with open(f"{self._save_directory}/{message.update.service.uid}.json", "w") as f:
             f.write("\n".join([json.dumps(x) for x in data]))
 
     def parse(self, message: Message) -> None: 
@@ -76,9 +76,8 @@ class MessageService:
             self._save_ts(ts_msg)
             
             if ts_msg.filter_for("BRSTLTM"):
-                print(f"{ts_msg.service.uid}: {ts_msg.current} -> {ts_msg.destination}")
-                print(ts_msg.format())
-                self._repository.save_service_update(ts_msg.service)
+                print(f"{ts_msg.update.service.uid}: {ts_msg.current} -> {ts_msg.destination}")
+                self._repository.save_service_update(ts_msg.update)
                 self._repository.save_location(ts_msg.locations)
         
         elif message.message_type == MessageType.SC:

@@ -3,6 +3,7 @@ from abc import ABC, abstractclassmethod, abstractmethod
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
+import time
 from typing import Optional
 import darwin.service.src.model as db_model
 
@@ -45,7 +46,7 @@ class ServiceUpdate:
 
     def to_orm(self) -> db_model.ServiceUpdate:
         return db_model.ServiceUpdate(
-            service=self.service.to_orm(),
+            service=db_model.Service(rid=self.service.rid, uid=self.service.uid),
             ts=self.ts
         )
 
@@ -53,7 +54,7 @@ class ServiceUpdate:
 @dataclass
 class LocationTimestamp:
 
-    ts: str
+    ts: time
     src: str
     delayed: bool
     status: Status
@@ -69,10 +70,10 @@ class LocationTimestamp:
 
     def to_orm(self) -> db_model.Timestamp:
         return db_model.Timestamp(
-            ts=datetime.fromisoformat(self.ts),
+            ts=self.ts,
             src=self.src,
             delayed=self.delayed,
-            status=self.status
+            status=self.status.value
         )
 
 @dataclass
@@ -120,7 +121,7 @@ class TSService:
             locs = [locs]
 
         return TSMessage(
-            service=Service(rid=rid, uid=uid),
+            update=ServiceUpdate(service=Service(rid=rid, uid=uid), ts=msg.timestamp),
             locations=[cls.create_location(loc) for loc in locs],
             timestamp=msg.timestamp
         )
@@ -128,7 +129,7 @@ class TSService:
 @dataclass
 class TSMessage:
 
-    service: ServiceUpdate
+    update: ServiceUpdate
     locations: list[Location]
     timestamp: datetime
 
@@ -158,8 +159,8 @@ class TSMessage:
         return [
             {
                 **{
-                    "rid": self.service.rid,
-                    "uid": self.service.uid,
+                    "rid": self.update.service.rid,
+                    "uid": self.update.service.uid,
                     "ts": self.timestamp.isoformat()
                 }, 
                 **loc.format()
@@ -201,8 +202,8 @@ class PassingLocation(Location):
 
         est_dep = msg['ns5:pass']
 
-        actual_ts = est_dep.get('@at')
-        estimated_ts = est_dep.get('@et')
+        actual_ts = time.strptime(est_dep.get('@at'), "%H:%M:%S")
+        estimated_ts = time.strptime(est_dep.get('@et'), "%H:%M:%S")
 
         src = est_dep.get('@src')
         delayed = bool(est_dep.get("@delayed", False))
@@ -226,7 +227,7 @@ class PassingLocation(Location):
 
     def to_orm(self) -> db_model.Location:
         return db_model.Location(
-            toc=self.tpl,
+            tpl=self.tpl,
             departure=self.passing.to_orm()
         )
 
@@ -244,8 +245,8 @@ class StoppingLocation(Location):
         if not body:
             return None
 
-        actual_ts = body.get('@at')
-        estimated_ts = body.get('@et')
+        actual_ts = time.strptime(body.get('@at'), "%H:%M:%S")
+        estimated_ts = time.strptime(body.get('@et'), "%H:%M:%S")
 
         src = body.get('@src')
         delayed = bool(body.get("@delayed", False))
@@ -309,7 +310,7 @@ class StoppingLocation(Location):
 
     def to_orm(self) -> db_model.Location:
         return db_model.Location(
-            toc=self.tpl,
+            tpl=self.tpl,
             departure=self.departure.to_orm() if self.departure else None,
             arrival=self.arrival.to_orm() if self.arrival else None,
             platform=self.platform.to_orm() if self.platform else None

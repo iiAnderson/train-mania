@@ -46,7 +46,8 @@ def main(message_type: str, rid: str) -> None:
         heart_beat_receive_scale=2.5
     )
 
-    msg_service = MessageService(DatabaseRepository.create(password="tr4in_m4ni4"), message_filter=MessageType.TS)
+    db_pw = os.environ['DB_PASSWORD']
+    msg_service = MessageService(DatabaseRepository.create(password=db_pw), message_filter=MessageType.TS)
 
     conn.set_listener('', StompClient(msg_service))
 
