@@ -1,9 +1,8 @@
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, time
 from typing import Any
 from sqlalchemy import ForeignKey
-from sqlalchemy import String, DateTime, Boolean, BigInteger
+from sqlalchemy import String, DateTime, Boolean, BigInteger, Time
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
@@ -43,7 +42,7 @@ class Timestamp(Base):
     __tablename__ = "timestamp"
 
     ts_id: Mapped[int] = mapped_column(BigInteger(), primary_key=True)
-    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ts: Mapped[time] = mapped_column(Time())
     src: Mapped[str] = mapped_column(String(30))
     delayed: Mapped[bool] = mapped_column(Boolean())
     status: Mapped[str] = mapped_column(String(30))
