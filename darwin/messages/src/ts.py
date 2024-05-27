@@ -202,8 +202,8 @@ class PassingLocation(Location):
 
         est_dep = msg['ns5:pass']
 
-        actual_ts = time.strptime(est_dep.get('@at'), "%H:%M:%S")
-        estimated_ts = time.strptime(est_dep.get('@et'), "%H:%M:%S")
+        actual_ts = est_dep.get('@at')
+        estimated_ts = est_dep.get('@et')
 
         src = est_dep.get('@src')
         delayed = bool(est_dep.get("@delayed", False))
@@ -211,7 +211,7 @@ class PassingLocation(Location):
         return PassingLocation(
             tpl=tpl,
             passing=LocationTimestamp(
-                ts=actual_ts if actual_ts else estimated_ts,
+                ts=time.strptime(actual_ts, "%H:%M") if actual_ts else time.strptime(estimated_ts, "%H:%M"),
                 src=src,
                 delayed=delayed,
                 status=Status.ACTUAL if actual_ts else Status.ESTIMATED
@@ -245,14 +245,14 @@ class StoppingLocation(Location):
         if not body:
             return None
 
-        actual_ts = time.strptime(body.get('@at'), "%H:%M:%S")
-        estimated_ts = time.strptime(body.get('@et'), "%H:%M:%S")
+        actual_ts = body.get('@at')
+        estimated_ts = body.get('@et')
 
         src = body.get('@src')
         delayed = bool(body.get("@delayed", False))
 
         return LocationTimestamp(
-            ts= actual_ts if actual_ts else estimated_ts,
+            ts=time.strptime(actual_ts, "%H:%M") if actual_ts else time.strptime(estimated_ts, "%H:%M"),
             src=src,
             delayed=delayed,
             status=Status.ACTUAL if actual_ts else Status.ESTIMATED
