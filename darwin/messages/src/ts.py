@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 import time
+import traceback
 from typing import Optional
 import darwin.service.src.model as db_model
 
@@ -17,6 +18,12 @@ class InvalidIntermediateTimestamp(Exception): ...
 class InvalidIntermediatePlatform(Exception): ...
 
 class IncorrectMessageFormat(Exception): ...
+
+class InvalidTimestamp(Exception): ...
+
+class InvalidStoppingLocation(Exception): ...
+
+class InvalidLocation(Exception): ...
 
 class LocationType(Enum):
     
@@ -62,7 +69,7 @@ class LocationTimestamp:
     def format(self) -> dict:
 
         return {
-            "ts": self.ts,
+            "ts": datetime.strftime(self.ts, "%H:%M"),
             "src": self.src,
             "delayed": self.delayed,
             "status": self.status.value
@@ -103,12 +110,18 @@ class TSService:
         if 'ns5:pass' in loc:
             return PassingLocation.create(loc)
         
-        return StoppingLocation.create(loc)
+        try:
+            return StoppingLocation.create(loc)
+        except InvalidStoppingLocation as e:
+            raise InvalidLocation(f"Invalid location") from e
 
     @classmethod
     def parse(cls, msg: Message) -> TSMessage:
 
         ts = msg.body['TS']
+
+        if not msg.body.get('@updateOrigin') == "TD":
+            raise IncorrectMessageFormat(f"Not TD origin message")
 
         rid = ts['@rid']
         uid = ts['@uid']
@@ -120,9 +133,18 @@ class TSService:
         if type(locs) != list:
             locs = [locs]
 
+        locations = []
+
+        for loc in locs:
+            try:
+                locations.append(cls.create_location(loc))
+            except InvalidLocation as e:
+                print(msg.body)
+                print(traceback.format_exc())
+                
         return TSMessage(
             update=ServiceUpdate(service=Service(rid=rid, uid=uid), ts=msg.timestamp),
-            locations=[cls.create_location(loc) for loc in locs],
+            locations=locations,
             timestamp=msg.timestamp
         )
 
@@ -183,7 +205,7 @@ class Location(ABC):
 
     @classmethod
     @abstractmethod
-    def create(self, msg: dict) -> Location:
+    def create(cls, msg: dict) -> Location:
         ...
 
 
@@ -193,7 +215,7 @@ class PassingLocation(Location):
     passing: LocationTimestamp
 
     @classmethod
-    def create(self, msg: dict) -> Location:
+    def create(cls, msg: dict) -> Location:
 
         tpl = msg['@tpl']
     
@@ -203,7 +225,7 @@ class PassingLocation(Location):
         est_dep = msg['ns5:pass']
 
         actual_ts = est_dep.get('@at')
-        estimated_ts = est_dep.get('@et')
+        estimated_ts = est_dep.get('@et') if est_dep.get('@et') else est_dep.get('@wet')
 
         src = est_dep.get('@src')
         delayed = bool(est_dep.get("@delayed", False))
@@ -246,10 +268,14 @@ class StoppingLocation(Location):
             return None
 
         actual_ts = body.get('@at')
-        estimated_ts = body.get('@et')
+        estimated_ts = body.get('@et') if body.get('@et') else body.get('@wet')
+
+        if not actual_ts and not estimated_ts:
+            raise InvalidTimestamp(f"Invalid timestamp {body}")
 
         src = body.get('@src')
         delayed = bool(body.get("@delayed", False))
+        
 
         return LocationTimestamp(
             ts=datetime.strptime(actual_ts, "%H:%M") if actual_ts else datetime.strptime(estimated_ts, "%H:%M"),
@@ -278,8 +304,11 @@ class StoppingLocation(Location):
 
         tpl = msg['@tpl']
 
-        arr = cls.parse_timestamp(msg.get('ns5:arr'))
-        dep = cls.parse_timestamp(msg.get('ns5:dep'))
+        try:
+            arr = cls.parse_timestamp(msg.get('ns5:arr'))
+            dep = cls.parse_timestamp(msg.get('ns5:dep'))
+        except InvalidTimestamp:
+            raise InvalidStoppingLocation(f"Invalid stopping location {msg}")
 
         plat = cls.parse_platform(msg.get('ns5:plat'))
 
