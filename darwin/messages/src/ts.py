@@ -54,7 +54,7 @@ class ServiceUpdate:
 @dataclass
 class LocationTimestamp:
 
-    ts: time
+    ts: datetime
     src: str
     delayed: bool
     status: Status
@@ -135,7 +135,7 @@ class TSMessage:
 
     def get_stations(self) -> str:
         ts = self.timestamp.strftime("%H:%M:%S")
-        return f"{ts},{self.rid}," + ",".join([str(loc) for loc in self.locations])
+        return f"{ts},{self.update.service.rid}," + ",".join([str(loc) for loc in self.locations])
 
     def filter_for(self, tiploc: str) -> bool:
         for location in self.locations:
@@ -211,7 +211,7 @@ class PassingLocation(Location):
         return PassingLocation(
             tpl=tpl,
             passing=LocationTimestamp(
-                ts=time.strptime(actual_ts, "%H:%M") if actual_ts else time.strptime(estimated_ts, "%H:%M"),
+                ts=datetime.strptime(actual_ts, "%H:%M") if actual_ts else datetime.strptime(estimated_ts, "%H:%M"),
                 src=src,
                 delayed=delayed,
                 status=Status.ACTUAL if actual_ts else Status.ESTIMATED
@@ -252,8 +252,8 @@ class StoppingLocation(Location):
         delayed = bool(body.get("@delayed", False))
 
         return LocationTimestamp(
-            ts=time.strptime(actual_ts, "%H:%M") if actual_ts else time.strptime(estimated_ts, "%H:%M"),
-            src=src,
+            ts=datetime.strptime(actual_ts, "%H:%M") if actual_ts else datetime.strptime(estimated_ts, "%H:%M"),
+            src=str(src),
             delayed=delayed,
             status=Status.ACTUAL if actual_ts else Status.ESTIMATED
         )
@@ -265,13 +265,13 @@ class StoppingLocation(Location):
             return None
 
         if type(platform) == str:
-            return Platform("unknown", False, platform)
+            return Platform("unknown", False, str(platform))
 
         src = platform.get('@platsrc')
         confirmed = bool(platform.get('@conf', False))
         text = platform.get('#text')
 
-        return Platform(src, confirmed, text)
+        return Platform(str(src), confirmed, str(text))
 
     @classmethod
     def create(cls, msg: dict) -> Location:
