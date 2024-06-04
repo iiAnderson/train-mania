@@ -22,15 +22,21 @@ class DatabaseRepository(DatabaseRepositoryInterface):
 
     def save_service_update(self, service_update: ServiceUpdate) -> ServiceUpdate:
         with self._session.begin() as session:
-            
+
             service = session.execute(
                 select(Service).filter_by(rid=service_update.service.rid)
-            ).first()
+            )
 
-            if service:
-                service_update.service = service[0]
+            updates = [service_update.to_orm()]
+            print(service)
 
-            session.add(service_update.to_orm())
+            data = service.first()
+            print(data)
+            if not data:
+                updates.append(service_update.service.to_orm())
+
+            print(f"Creating {updates}")
+            session.add_all(updates)
             session.commit()
 
     def save_location(self, locations: list[Location]) -> ServiceUpdate:
@@ -40,8 +46,8 @@ class DatabaseRepository(DatabaseRepositoryInterface):
             session.commit()
 
     @classmethod
-    def create(self, password: str) -> DatabaseRepository:
-        return DatabaseRepository(
+    def create(cls, password: str) -> DatabaseRepository:
+        return cls(
             engine=create_engine(f"postgresql://postgres:{password}@127.0.0.1:5436/postgres")
         )
         

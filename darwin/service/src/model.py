@@ -18,8 +18,6 @@ class Service(Base):
     rid: Mapped[str] = mapped_column(String(30), primary_key=True)
     uid: Mapped[str] = mapped_column(String(10))
 
-    update: Mapped["ServiceUpdate"] = relationship(back_populates="service", cascade="all, delete-orphan")
-
     def __repr__(self) -> str:
         return f"Service(rid={self.rid!r}, uid={self.uid!r})"
 
@@ -31,7 +29,6 @@ class ServiceUpdate(Base):
     rid: Mapped[str] = mapped_column(ForeignKey("service.rid"))
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
-    service: Mapped["Service"] = relationship(back_populates="update")
     location: Mapped["Location"] = relationship(back_populates="update")
 
     def __repr__(self) -> str:

@@ -53,7 +53,7 @@ class ServiceUpdate:
 
     def to_orm(self) -> db_model.ServiceUpdate:
         return db_model.ServiceUpdate(
-            service=db_model.Service(rid=self.service.rid, uid=self.service.uid),
+            rid=self.service.rid,
             ts=self.ts
         )
 
@@ -139,7 +139,6 @@ class TSService:
             try:
                 locations.append(cls.create_location(loc))
             except InvalidLocation as e:
-                print(msg.body)
                 print(traceback.format_exc())
                 
         return TSMessage(
