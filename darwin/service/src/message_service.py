@@ -69,6 +69,7 @@ class MessageService:
 
         if self._message_filter and self._message_filter != message.message_type:
             return
+            
         if message.message_type == MessageType.TS:
             ts_msg = TSService.parse(message)
 
