@@ -2,17 +2,19 @@
 from __future__ import annotations
 from darwin.messages.src.ts import Location, ServiceUpdate
 from darwin.service.src.model import Service
-from sqlalchemy import Engine, select
+from sqlalchemy import Engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
+import darwin.service.src.model as db_model
+
 
 class DatabaseRepositoryInterface:
 
     def save_service_update(self, service_update: ServiceUpdate) -> None:
         ...
 
-    # def save_locations(self, locations: list[Location]) -> None:
-    #     ...
+    def save_locations(self, locations: list[Location]) -> None:
+        ...
 
 
 class DatabaseRepository(DatabaseRepositoryInterface):
@@ -20,29 +22,24 @@ class DatabaseRepository(DatabaseRepositoryInterface):
     def __init__(self, engine: Engine) -> None:
         self._session = sessionmaker(engine)
 
-    def save_service_update(self, service_update: ServiceUpdate) -> ServiceUpdate:
+    def save_service_update(self, service_update: ServiceUpdate) -> None:
         with self._session.begin() as session:
-
-            service = session.execute(
-                select(Service).filter_by(rid=service_update.service.rid)
-            )
+            
+            service = session.query(Service).filter_by(rid=service_update.service.rid, uid=service_update.service.uid).first()
 
             updates = [service_update.to_orm()]
-            print(service)
 
-            data = service.first()
-            print(data)
-            if not data:
+            if not service:
                 updates.append(service_update.service.to_orm())
 
             print(f"Creating {updates}")
             session.add_all(updates)
             session.commit()
 
-    def save_location(self, locations: list[Location]) -> ServiceUpdate:
+    def save_location(self, locations: list[Location], service_update: db_model.ServiceUpdate) -> None:
         with self._session.begin() as session:
             
-            session.add_all([loc.to_orm() for loc in locations])
+            session.add_all([loc.to_orm(service_update) for loc in locations])
             session.commit()
 
     @classmethod

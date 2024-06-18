@@ -199,7 +199,7 @@ class Location(ABC):
         ...
 
     @abstractmethod
-    def to_orm(self) -> db_model.Location:
+    def to_orm(self, service_update: db_model.ServiceUpdate) -> db_model.Location:
         ...
 
     @classmethod
@@ -246,9 +246,10 @@ class PassingLocation(Location):
             "departure": self.passing.format() if self.passing else None
         }
 
-    def to_orm(self) -> db_model.Location:
+    def to_orm(self, service_update: db_model.ServiceUpdate) -> db_model.Location:
         return db_model.Location(
             tpl=self.tpl,
+            update_id=service_update.update_id,
             departure=self.passing.to_orm()
         )
 
@@ -336,9 +337,10 @@ class StoppingLocation(Location):
             "platform": asdict(self.platform) if self.platform else None
         }
 
-    def to_orm(self) -> db_model.Location:
+    def to_orm(self, service_update: db_model.ServiceUpdate) -> db_model.Location:
         return db_model.Location(
             tpl=self.tpl,
+            update_id=service_update.update_id,
             departure=self.departure.to_orm() if self.departure else None,
             arrival=self.arrival.to_orm() if self.arrival else None,
             platform=self.platform.to_orm() if self.platform else None
