@@ -78,7 +78,7 @@ class MessageService:
             if ts_msg.filter_for("BRSTLTM"):
                 print(f"{ts_msg.update.service.uid}: {ts_msg.current} -> {ts_msg.destination}")
                 update = self._repository.save_service_update(ts_msg.update)
-                self._repository.save_location(ts_msg.locations, update.update_id)
+                self._repository.save_location(ts_msg.locations, update)
         
         elif message.message_type == MessageType.SC:
             
